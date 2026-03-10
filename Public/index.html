@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anastik Manufacturing Pvt Ltd</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<header>
+    <div class="name">
+        <div class="loader"></div>
+        <div class="logo">ANASTIK MANUFACTURING PVT LTD</div>
+    </div>
+
+    <nav>
+        <a class="login-btn" href="#" onclick="showSection('home')">Home</a>
+        <a class="login-btn" href="#" onclick="showSection('about')">About</a>
+        <a class="login-btn" href="#" onclick="showSection('order')">Order</a>
+        <a class="login-btn" href="#" onclick="showSection('address')">Address</a>
+
+        <div class="dropdown">
+            <button id="loginBtn" class="login-btn">Login</button>
+
+            <div class="dropdown-content">
+                <a href="#" onclick="openLogin()">Owner Login</a>
+                <a href="#" onclick="openCustomerLogin()">Customer Login</a>
+            </div>
+        </div>
+
+        <!-- PROFILE ICON -->
+        <div id="profileArea" style="display:none;">
+            <img src="https://i.imgur.com/6VBx3io.png" class="profile-icon" onclick="toggleProfile()">
+        </div>
+
+    </nav>
+</header>
+
+
+<!-- HERO SECTION -->
+<div id="home-wrapper">
+
+<section class="hero">
+    <div class="hero-graphic">
+        <div id="canvas-container"></div>
+    </div>
+
+    <div class="hero-content">
+        <h1>ANASTIK<br>MANUFACTURING PVT LTD</h1>
+
+        <div class="Business">
+            <h3>Business Description</h3>
+            <br>
+            <p>
+                Anastik Manufacturing Pvt Ltd is a Bihar-based emerging leader in high-quality household <br>
+                and industrial utility products. We specialize in eco-friendly paper plates, paper glasses, and <br>
+                durable Juna scrubbers.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Video Section -->
+<div class="videoSection">
+
+    <div class="videoBox">
+        <video class="machineVideo" src="Machine Video.mp4" autoplay muted loop playsinline></video>
+        <button class="muteBtn">🔇</button>
+    </div>
+
+    <div class="videoBox">
+        <video class="machineVideo" src="WhatsApp Video 2026-02-04 at 20.40.03.mp4" autoplay muted loop playsinline></video>
+        <button class="muteBtn">🔇</button>
+    </div>
+
+</div>
+
+<!-- PRODUCTS -->
+<section class="products">
+    <h2 id="order">Our Premium Products (Click for Details)</h2>
+
+    <div class="product-grid">
+        <button class="product-btn" onclick="showDetail('plate')">Paper Plates</button>
+        <button class="product-btn" onclick="showDetail('glass')">Paper Glasses</button>
+        <button class="product-btn" onclick="showDetail('juna')">Juna Packing</button>
+    </div>
+
+    <div id="plate-detail" class="details-box">
+        <h3>Paper Plate Details</h3>
+        <p><strong>
+            Paper plate :-Manufactured from 100% food-grade, biodegradable material. These plates feature a high-strength design with moisture-resistant coating, making them perfect for hot meals and liquids. Available in various sizes (6" to 12") with premium silver or printed leaf patterns.
+        </strong></p>
+    </div>
+
+    <div id="glass-detail" class="details-box">
+        <h3>Paper Glass Details</h3>
+        <p><strong>
+            Paper Glass :- Our premium paper glasses come with a leak-proof polyethylene lining. They are designed for both hot and cold beverages like tea, coffee, and juices. Ranging from 100ml to 300ml, they offer a sturdy grip and are completely hygienic and easy to dispose of.
+        </strong></p>
+    </div>
+
+    <div id="juna-detail" class="details-box">
+        <h3>Juna Packing</h3>
+        <p><strong>
+            Juna Packing (Scrubber) :- High-density stainless steel scrubbers designed for heavy-duty industrial and domestic cleaning. These are rust-proof, long-lasting, and engineered to remove tough stains without damaging surfaces. Available in professional bulk packing for wholesalers.
+        </strong></p>
+    </div>
+</section>
+
+<section class="hero page-section" id="home">
+</section>
+
+<section class="why-us">
+    <h2 class="section-title">Why Choose Anastik</h2>
+
+    <div class="why-grid">
+        <div class="why-card">
+            <h3>Eco Friendly</h3>
+            <p>100% biodegradable paper products designed to reduce plastic waste.</p>
+        </div>
+
+        <div class="why-card">
+            <h3>Quality Assured</h3>
+            <p>Strict quality checks ensure durability, hygiene, and performance.</p>
+        </div>
+
+        <div class="why-card">
+            <h3>Made in India</h3>
+            <p>Proudly manufactured in Bihar, supporting local employment.</p>
+        </div>
+
+        <div class="why-card">
+            <h3>Bulk Supply</h3>
+            <p>Capable of handling large-scale industrial and commercial orders.</p>
+        </div>
+    </div>
+</section>
+
+<section class="stats">
+    <div class="stat-box">
+        <h2>10+</h2>
+        <p>Years Experience</p>
+    </div>
+    <div class="stat-box">
+        <h2>500K+</h2>
+        <p>Products / Month</p>
+    </div>
+    <div class="stat-box">
+        <h2>50+</h2>
+        <p>Dealers Network</p>
+    </div>
+    <div class="stat-box">
+        <h2>100%</h2>
+        <p>Eco Friendly</p>
+    </div>
+</section>
+
+<section class="process">
+    <h2 class="section-title">How We Work</h2>
+
+    <div class="process-steps">
+        <div class="step">Raw Material Selection</div>
+        <div class="step">Eco Manufacturing</div>
+        <div class="step">Quality Inspection</div>
+        <div class="step">Bulk Packaging</div>
+        <div class="step">Fast Delivery</div>
+    </div>
+</section>
+
+<section class="trust">
+    <p>Trusted by retailers, wholesalers & distributors across Bihar and nearby states.</p>
+</section>
+
+</div>
+
+<!-- ABOUT SECTION -->
+<section class="page-section" id="about-page" style="display:none;">
+    <h2 class="section-title">
+    About Anastik Manufacturing Pvt Ltd
+</h2>
+<div class="about-box"> 
+    <p> <strong>Anastik Manufacturing Pvt Ltd</strong> is a rapidly growing manufacturing company based in the Darbhanga district of Bihar. Built on the core values of quality, sustainability, and innovation, the company is committed to delivering reliable and eco-friendly utility products for both household and industrial use.
+    </p>
+     <p> Under the visionary leadership of <strong>Shivam Kumar Chaudhary</strong>, Anastik Manufacturing Pvt Ltd has established itself as a trusted name in the regional manufacturing sector. Our leadership focuses on modern production practices, ethical business operations, and long-term customer satisfaction. </p> 
+     <p> <strong>Our Mission</strong><br> Our mission is to promote environmentally responsible manufacturing by replacing harmful plastic-based products with biodegradable and sustainable alternatives. We actively support the “Make in India” initiative by strengthening local manufacturing capabilities and generating employment opportunities in North Bihar. </p>
+    <p> <strong>What We Do</strong><br> We specialize in the large-scale production of eco-friendly paper plates, paper glasses, and high-durability “Juna” steel scrubbers. Every product is manufactured using advanced machinery and undergoes strict quality control to ensure superior performance, hygiene, and durability. </p>
+    </div>
+</section>
+
+<!-- ORDER SECTION -->
+<section class="products page-section" id="order" style="display:none;">
+</section>
+
+<!-- ADDRESS SECTION -->
+<section class="page-section" id="address" style="display:none;">
+    <h2 class="section-title">Company Address</h2>
+    <div class="address-box">
+        <p><strong>Anastik Manufacturing Pvt Ltd</strong></p>
+        <p>Industrial Area, Bihar, India</p>
+        <p>Email: support@anastikmanufacturing.com</p>
+        <p>Phone: +91 9XXXXXXXXX</p>
+        <p>Working Hours: Mon – Sat (9:00 AM – 6:00 PM)</p>
+    </div>
+</section>
+
+
+<!-- ================= CHATBOT ================= -->
+
+<div class="chatbot-container">
+
+    <!-- Chat Icon Button -->
+    <div class="chatbot-icon" onclick="toggleChatbot()">
+        <img src="Cartoon.png" alt="">
+    </div>
+
+    <!-- Chat Window -->
+    <div class="chatbot-box" id="chatbotBox">
+
+        <div class="chat-header">
+            <h3>Anastik Support</h3>
+            <span onclick="toggleChatbot()">✕</span>
+        </div>
+
+        <div class="chat-body" id="chatBody">
+            <div class="bot-message">
+                <b>Namaste!</b> <br> Anastik Manufacturing ke Products mein aapka swagat hai. <br> Kripya niche diye gaye products par click karein:
+            </div>
+            <div class="quick-options">
+                <button onclick="quickReply('Paper Plates')">Paper Plates</button>
+                <button onclick="quickReply('Paper Glasses')">Paper Glasses</button>
+                <button onclick="quickReply('Juna Scrubber')">Juna Scrubber</button>
+                <button onclick="quickReply('Bulk Order')">Bulk Order</button>
+            </div>
+        </div>
+
+        <div class="chat-footer">
+            <input type="text" id="userInput" placeholder="Type your message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= SIGNUP FORM ================= -->
+
+<!-- LOGIN OVERLAY -->
+
+<div id="login-overlay">
+    <div class="login-wrapper">
+
+        <div class="login-left">
+            <span class="close-btn" onclick="closeLogin()">✕</span>
+            <h2>Login</h2>
+
+            <div class="input-box">
+                <input id="loginUsername" type="text" placeholder="Username">
+            </div>
+
+            <div class="input-box">
+                <input id="loginPassword" type="password" placeholder="Password">
+            </div>
+
+            <button onclick="loginUser()" class="login-btn">Login</button>
+
+            <p class="register-text">
+                Don't have an account?
+                <span onclick="openSignup()">Create Account</span>
+            </p>
+        </div>
+
+        <div class="login-right">
+            <h1>WELCOME BACK!</h1>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- SIGNUP OVERLAY -->
+
+<div id="signup-overlay">
+
+    <div class="signup-wrapper">
+
+        <span class="close-btn" onclick="closeSignup()">✕</span>
+
+        <h2>Create Account</h2>
+
+        <div class="signup-input">
+            <input id="signupName" type="text" placeholder="Full Name">
+        </div>
+
+        <div class="signup-input">
+            <input id="signupEmail" type="email" placeholder="Email Address">
+        </div>
+
+        <div class="signup-input">
+            <input id="signupUsername" type="text" placeholder="Username">
+        </div>
+
+        <div class="signup-input">
+            <input id="signupPassword" type="password" placeholder="Password">
+        </div>
+
+        <div class="signup-input">
+            <input id="signupConfirmPassword" type="password" placeholder="Confirm Password">
+        </div>
+
+        <button onclick="createAccount()" class="signup-btn">Create Account</button>
+
+        <p class="login-link">
+            Already have an account?
+            <span onclick="backToLogin()">Login</span>
+        </p>
+
+    </div>
+
+</div>
+<!-- Profile popup -->
+
+<div id="profilePanel" class="profile-panel">
+
+<div class="profile-header">
+
+<img src="https://i.imgur.com/6VBx3io.png" class="profile-big">
+
+<h3 id="pName"></h3>
+
+</div>
+
+<div class="profile-info">
+
+<p><b>Email :</b> <span id="pEmail"></span></p>
+
+<p><b>Username :</b> <span id="pUsername"></span></p>
+
+</div>
+
+<button onclick="logoutUser()" class="logout-btn">Logout</button>
+
+</div>
+
+<div id="profileOverlay" class="profile-overlay" onclick="closeProfile()"></div>
+
+<!-- Customer Login -->
+ <div class="customer-login-container" id="customerLoginForm" style="display: none;">
+
+    <form class="customer-form">
+        <!-- CLOSE BUTTON -->
+    <span class="close-btn" onclick="closeCustomerLogin()">✖</span>
+
+        <h2>Customer Login</h2>
+
+        <div class="input-group">
+            <input type="text" required>
+            <label>Full Name</label>
+        </div>
+
+        <div class="input-group">
+            <input type="email" required>
+            <label>Email Address</label>
+        </div>
+
+        <div class="input-group">
+            <input type="tel" required>
+            <label>Mobile Number</label>
+        </div>
+
+        <div class="input-group">
+            <input type="text" required>
+            <label>Address</label>
+        </div>
+
+        <div class="input-group">
+            <input type="text" required>
+            <label>Distric</label>
+        </div>
+
+        <div class="input-group">
+            <input type="text" required>
+            <label>State</label>
+        </div>
+        
+
+        <div class="input-group">
+            <select name="Products" id="productName">
+                <option value="Plate">Plate</option>
+                <option value="Tea Cup">Tea Cup</option>
+                <option value="Plastic Glass">Plastic Glass</option>
+                <option value="Juna">Juna</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <input type="password" required>
+            <label>Password</label>
+        </div>
+
+        <button onclick="createAccount()" class="customer-btn">Login</button>
+
+    </form>
+
+</div>
+ <!-- Customer Login close -->
+<footer class="footer">
+    <p>© 2026 Anastik Manufacturing Pvt Ltd. All Rights Reserved.</p>
+</footer>
+
+<script src="script.js"></script>
+
+</body>
+</html>
+
+
