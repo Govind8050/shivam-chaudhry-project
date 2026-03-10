@@ -247,7 +247,7 @@ alert("Password not match");
 return;
 }
 
-const res = await fetch("http://localhost:5000/api/auth/signup",{
+const res = await fetch("/api/auth/signup",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
@@ -279,7 +279,7 @@ async function loginUser(){
 const username = document.getElementById("loginUsername").value;
 const password = document.getElementById("loginPassword").value;
 
-const res = await fetch("http://localhost:5000/api/auth/login",{
+const res = await fetch("/api/auth/login",{
 method:"POST",
 headers:{
 "Content-Type":"application/json"
