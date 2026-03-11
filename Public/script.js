@@ -533,7 +533,7 @@ async function customerLogin(){
 const email = document.getElementById("customerEmail").value
 const password = document.getElementById("customerPassword").value
 
-const res = await fetch("http://localhost:5000/api/auth/customer-login",{
+const res = await fetch("/api/auth/customer-login",{
 
 method:"POST",
 headers:{
