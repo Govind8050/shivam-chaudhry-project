@@ -448,7 +448,7 @@ const state = inputs[5].value
 const pincode = inputs[6].value
 const password = inputs[7].value
 
-const res = await fetch("http://localhost:5000/api/auth/customer-register",{
+const res = await fetch("/api/auth/customer-register",{
 
 method:"POST",
 headers:{
@@ -475,7 +475,7 @@ async function customerLogin(){
 const email = document.getElementById("customerEmail").value
 const password = document.getElementById("customerPassword").value
 
-const res = await fetch("http://localhost:5000/api/auth/customer-login",{
+const res = await fetch("/api/auth/customer-login",{
 
 method:"POST",
 headers:{
