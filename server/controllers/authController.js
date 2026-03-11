@@ -1,5 +1,6 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const Customer = require("../models/Customer")
 
 /* ================= SIGNUP ================= */
 
@@ -106,6 +107,89 @@ res.json({
 success:false,
 message:"Login failed"
 });
+
+}
+
+}
+
+
+// CUSTOMER REGISTER
+
+exports.registerCustomer = async (req,res)=>{
+
+try{
+
+const {name,email,mobile,address,district,state,pincode,password}=req.body
+
+const customer = new Customer({
+name,
+email,
+mobile,
+address,
+district,
+state,
+pincode,
+password
+})
+
+await customer.save()
+
+res.json({
+success:true,
+message:"Customer Account Created"
+})
+
+}catch(err){
+
+res.json({
+success:false,
+message:"Error creating account"
+})
+
+}
+
+}
+
+
+// CUSTOMER LOGIN
+
+exports.loginCustomer = async (req,res)=>{
+
+try{
+
+const {email,password}=req.body
+
+const customer = await Customer.findOne({email})
+
+if(!customer){
+
+return res.json({
+success:false,
+message:"Customer not found"
+})
+
+}
+
+if(customer.password !== password){
+
+return res.json({
+success:false,
+message:"Wrong password"
+})
+
+}
+
+res.json({
+success:true,
+customer
+})
+
+}catch(err){
+
+res.json({
+success:false,
+message:"Login error"
+})
 
 }
 

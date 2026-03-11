@@ -18,7 +18,6 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "../Public")));
 
 /* ================= DATABASE ================= */
-
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>{
     console.log("MongoDB Atlas Connected");

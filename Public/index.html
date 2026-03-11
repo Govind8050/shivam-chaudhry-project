@@ -321,6 +321,7 @@
     </div>
 
 </div>
+
 <!-- Profile popup -->
 
 <div id="profilePanel" class="profile-panel">
@@ -348,13 +349,13 @@
 <div id="profileOverlay" class="profile-overlay" onclick="closeProfile()"></div>
 
 <!-- Customer Login -->
- <div class="customer-login-container" id="customerLoginForm" style="display: none;">
+<div class="customer-login-container" id="customerLoginForm" style="display: none;">
 
     <form class="customer-form">
         <!-- CLOSE BUTTON -->
     <span class="close-btn" onclick="closeCustomerLogin()">✖</span>
 
-        <h2>Customer Login</h2>
+        <h2>Customer Account Create</h2>
 
         <div class="input-group">
             <input type="text" required>
@@ -388,12 +389,8 @@
         
 
         <div class="input-group">
-            <select name="Products" id="productName">
-                <option value="Plate">Plate</option>
-                <option value="Tea Cup">Tea Cup</option>
-                <option value="Plastic Glass">Plastic Glass</option>
-                <option value="Juna">Juna</option>
-            </select>
+            <input type="number" required>
+            <label>Pin Code</label>
         </div>
 
         <div class="input-group">
@@ -401,9 +398,40 @@
             <label>Password</label>
         </div>
 
-        <button onclick="createAccount()" class="customer-btn">Login</button>
+        <button onclick="createCustomerAccount()" class="customer-btn">Create Account</button>
 
+        <p class="register-text">
+            Don't have an account?
+            <span onclick="switchToLogin()">Login</span>
+        </p>
     </form>
+
+</div>
+<!-- CUSTOMER LOGIN POPUP -->
+
+<div id="customerLoginPopup" class="customer-login-popup">
+
+<div class="login-box">
+
+<span class="close-login" onclick="closeCustomerLogin()">✖</span>
+
+    <h2>Customer Login</h2>
+
+<div class="login-input">
+<input type="email" id="customerEmail" required>
+<label>Email Address</label>
+</div>
+
+<div class="login-input">
+<input type="password" id="customerPassword" required>
+<label>Password</label>
+</div>
+
+<button onclick="customerLogin()" class="login-submit">
+Login
+</button>
+
+</div>
 
 </div>
  <!-- Customer Login close -->

@@ -400,3 +400,179 @@ function openCustomerLogin(){
     document.body.style.overflow = "hidden";
 }
 // Customer Login Form End
+
+
+/* ================= CREATE ACCOUNT FORM ================= */
+
+function openCustomerForm(){
+
+document.getElementById("customerLoginForm").style.display="flex"
+document.body.style.overflow="hidden"
+
+}
+
+function closeCustomerForm(){
+
+document.getElementById("customerLoginForm").style.display="none"
+document.body.style.overflow="auto"
+
+}
+
+/* ================= LOGIN POPUP ================= */
+
+function openLoginPopup(){
+
+document.getElementById("customerLoginPopup").classList.add("active")
+
+}
+
+function closeLoginPopup(){
+
+document.getElementById("customerLoginPopup").classList.remove("active")
+
+}
+
+
+/* ================= CREATE ACCOUNT ================= */
+
+async function createCustomerAccount(){
+
+const inputs = document.querySelectorAll(".customer-form input")
+
+const name = inputs[0].value
+const email = inputs[1].value
+const mobile = inputs[2].value
+const address = inputs[3].value
+const district = inputs[4].value
+const state = inputs[5].value
+const pincode = inputs[6].value
+const password = inputs[7].value
+
+const res = await fetch("http://localhost:5000/api/auth/customer-register",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+name,email,mobile,address,district,state,pincode,password
+})
+
+})
+
+const data = await res.json()
+
+alert(data.message)
+
+}
+
+
+/* ================= CUSTOMER LOGIN ================= */
+
+async function customerLogin(){
+
+const email = document.getElementById("customerEmail").value
+const password = document.getElementById("customerPassword").value
+
+const res = await fetch("http://localhost:5000/api/auth/customer-login",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+email,password
+})
+
+})
+
+const data = await res.json()
+
+if(data.success){
+
+document.getElementById("pName").innerText = data.customer.name
+document.getElementById("pEmail").innerText = data.customer.email
+document.getElementById("pUsername").innerText = data.customer.mobile
+
+document.getElementById("profilePanel").style.display="block"
+
+closeLoginPopup()
+closeCustomerForm()
+
+}else{
+
+alert(data.message)
+
+}
+
+}
+
+function switchToLogin(){
+
+// Create Account form close
+document.getElementById("customerLoginForm").style.display="none";
+
+// Login popup open
+document.getElementById("customerLoginPopup").classList.add("active");
+
+// body scroll normal
+document.body.style.overflow="auto";
+
+}
+
+function closeLoginPopup(){
+
+document.getElementById("customerLoginPopup").classList.remove("active")
+
+}
+
+async function customerLogin(){
+
+const email = document.getElementById("customerEmail").value
+const password = document.getElementById("customerPassword").value
+
+const res = await fetch("http://localhost:5000/api/auth/customer-login",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+email,password
+})
+
+})
+
+const data = await res.json()
+
+if(data.success){
+
+alert("Customer Login Successful")
+
+/* SAVE CUSTOMER */
+
+localStorage.setItem("user",JSON.stringify({
+name:data.customer.name,
+email:data.customer.email,
+username:data.customer.mobile
+}))
+
+/* UPDATE NAVBAR */
+
+updateNavbar()
+
+/* CLOSE POPUPS */
+
+closeLoginPopup()
+closeCustomerForm()
+
+}else{
+
+alert(data.message)
+
+}
+
+}
