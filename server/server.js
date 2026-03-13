@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
+const nodemailer = require("nodemailer");
 
 const authRoutes = require("./routes/authRoutes");
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, "../Public")));
 
 /* ================= DATABASE ================= */
+
 mongoose.connect(process.env.MONGO_URI)
 .then(()=>{
     console.log("MongoDB Atlas Connected");
@@ -30,11 +32,66 @@ mongoose.connect(process.env.MONGO_URI)
 
 app.use("/api/auth", authRoutes);
 
+
+/* ================= BULK ORDER EMAIL API ================= */
+
+app.post("/send-order", async (req,res)=>{
+
+    try{
+
+        const {name, phone, address} = req.body;
+
+        const transporter = nodemailer.createTransport({
+
+            service:"gmail",
+
+            auth:{
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS
+            }
+
+        });
+
+        const mailOptions = {
+
+            from: process.env.EMAIL_USER,
+
+            to: "gm085913@gmail.com",
+
+            subject: "New Bulk Order Request",
+
+            text: `
+New Customer Contact Request
+
+Name: ${name}
+Phone: ${phone}
+Address: ${address}
+
+Customer wants to place a bulk order.
+`
+        };
+
+        await transporter.sendMail(mailOptions);
+
+        res.json({message:"Email sent successfully"});
+
+    }
+    catch(error){
+
+        console.log("Email Error:",error);
+
+        res.status(500).json({message:"Email failed"});
+    }
+
+});
+
+
 /* ================= HOME ROUTE ================= */
 
 app.get("/", (req,res)=>{
     res.sendFile(path.join(__dirname,"../Public/index.html"));
 });
+
 
 /* ================= SERVER ================= */
 

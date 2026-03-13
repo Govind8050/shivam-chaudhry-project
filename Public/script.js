@@ -153,6 +153,13 @@ function toggleOverlay(id,state){
 
 
 /* ================= CHATBOT ================= */
+let orderStep = 0;
+
+let userOrderData = {
+    name: "",
+    phone: "",
+    address: ""
+};
 
 function toggleChatbot(){
 
@@ -172,15 +179,64 @@ function sendMessage(){
 
     addMessage(message,"user-message");
 
-    botReply(message);
-
     input.value="";
+
+    if(orderStep === 1){
+
+        userOrderData.name = message;
+        orderStep = 2;
+
+        setTimeout(()=>{
+            addMessage("Please enter your Mobile Number","bot-message");
+        },500);
+
+        return;
+    }
+
+    if(orderStep === 2){
+
+        userOrderData.phone = message;
+        orderStep = 3;
+
+        setTimeout(()=>{
+            addMessage("Please enter your Address","bot-message");
+        },500);
+
+        return;
+    }
+
+    if(orderStep === 3){
+
+        userOrderData.address = message;
+
+        setTimeout(()=>{
+            addMessage("Thank you for contacting Anastik Manufacturing. Our team will connect with you shortly.","bot-message");
+        },500);
+
+        orderStep = 0;
+
+        sendEmail(userOrderData);
+
+        return;
+    }
+
+    botReply(message);
 
 }
 
 function quickReply(message){
 
     addMessage(message,"user-message");
+
+    if(message === "Bulk Order"){
+        orderStep = 1;
+
+        setTimeout(()=>{
+            addMessage("Please enter your Name","bot-message");
+        },500);
+
+        return;
+    }
 
     botReply(message);
 
@@ -232,6 +288,21 @@ function botReply(message){
 
 }
 
+function sendEmail(data){
+
+fetch("/send-order",{
+
+    method:"POST",
+
+    headers:{
+        "Content-Type":"application/json"
+    },
+
+    body:JSON.stringify(data)
+
+});
+
+}
 
 /* ================= SIGNUP ================= */
 async function createAccount(){
@@ -576,3 +647,17 @@ alert(data.message)
 }
 
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+
+
+    document.getElementById("userInput").addEventListener("keypress", function(event){
+
+        if(event.key === "Enter"){
+            event.preventDefault();
+            sendMessage();
+        }
+
+    });
+
+});
