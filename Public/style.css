@@ -713,7 +713,7 @@ cursor:pointer;
 .chatbot-box {
     width: 320px;
     height: 500px;
-    background: white;
+    background-image: url("ChatGPT\ Image\ Feb\ 4\,\ 2026\,\ 08_59_08\ PM.png");
     position: absolute;
     bottom: 70px;
     right: 0;
@@ -744,7 +744,8 @@ cursor:pointer;
 }
 
 .bot-message {
-    background: #120303;
+    background: white;
+    color: black;
     padding: 8px 12px;
     border-radius: 10px;
     font-size: 15px;
@@ -773,10 +774,11 @@ cursor:pointer;
 .chat-footer input {
     flex: 1;
     padding: 6px;
-    border: 3px solid #000000;
+    border: 3px solid #e6d3d3;
     border-radius: 5px;
-    color: #000;
+    color: #ffffff;
     font-weight: bold;
+    background-color: black;
 }
 
 .chat-footer button {
