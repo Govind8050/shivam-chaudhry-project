@@ -9,4 +9,4 @@ router.post("/login",authController.login);
 router.post("/customer-register",authController.registerCustomer);
 router.post("/customer-login",authController.loginCustomer);
 
-module.exports = router;
+module.exports = router;   
