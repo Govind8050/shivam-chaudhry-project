@@ -9,9 +9,9 @@
 body {
     background: radial-gradient(circle at top, #061a2f, #000);
     color: #fff;
-    background-image: url("Header_bg.png");
+    background-image: url("ChatGPT\ Image\ Feb\ 4\,\ 2026\,\ 08_59_08\ PM.png");
     background-repeat: no-repeat;
-    background-size: cover;
+    background-size: cover; 
 }
 
 /* NAVBAR */
@@ -22,7 +22,7 @@ header {
     margin-top: -50px;
     padding: 18px 8%;
     background: rgba(0,0,0,0.6);
-    /* background-image: url("ChatGPT\ Image\ Feb\ 4\,\ 2026\,\ 08_59_08\ PM.png"); */
+    border: none;
     backdrop-filter: blur(10px);
     /* margin-bottom: 60px; */
     height: 200px;
