@@ -661,3 +661,103 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
+
+
+
+// Owner LOgin All Details 
+
+const OWNER_ID = "admin123";
+const OWNER_PASSWORD = "secure@123";
+const OWNER_EMAIL = "owneremail@gmail.com";
+
+let generatedOTP = "";
+
+/* ================= OPEN CLOSE ================= */
+
+function openOwnerLogin(){
+document.getElementById("login-overlay").style.display="flex";
+}
+
+function closeOwnerLogin(){
+document.getElementById("login-overlay").style.display="none";
+}
+
+function openForgot(){
+closeOwnerLogin();
+document.getElementById("forgot-overlay").style.display="flex";
+
+/* MASK EMAIL */
+let email = OWNER_EMAIL;
+let masked = email.slice(0,4) + "****" + email.slice(email.indexOf("@"));
+document.getElementById("maskedEmail").innerText = "Email: " + masked;
+}
+
+function closeForgot(){
+document.getElementById("forgot-overlay").style.display="none";
+}
+
+/* ================= LOGIN ================= */
+
+function ownerLogin(){
+
+const id = document.getElementById("ownerId").value;
+const pass = document.getElementById("ownerPassword").value;
+
+if(id === OWNER_ID && pass === OWNER_PASSWORD){
+
+alert("Owner Login Success");
+
+/* LOGIN COUNT */
+let count = localStorage.getItem("ownerLoginCount") || 0;
+count++;
+localStorage.setItem("ownerLoginCount", count);
+
+/* SAVE USER */
+localStorage.setItem("owner","true");
+
+/* PROFILE SHOW */
+updateNavbar();
+
+closeOwnerLogin();
+
+}else{
+alert("Invalid Owner Credentials");
+}
+
+}
+
+/* ================= OTP ================= */
+
+function generateOTP(){
+
+generatedOTP = Math.floor(1000 + Math.random()*9000);
+
+alert("OTP sent to email: " + generatedOTP); // demo
+
+/* REAL: send from backend */
+}
+
+function verifyOTP(){
+
+const userOTP = document.getElementById("otpInput").value;
+
+if(userOTP == generatedOTP){
+
+alert("OTP Verified - Login Success");
+
+/* LOGIN COUNT */
+let count = localStorage.getItem("ownerLoginCount") || 0;
+count++;
+localStorage.setItem("ownerLoginCount", count);
+
+localStorage.setItem("owner","true");
+
+updateNavbar();
+
+closeForgot();
+
+}else{
+alert("Invalid OTP");
+}
+
+}

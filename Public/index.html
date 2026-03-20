@@ -27,7 +27,7 @@
             <button id="loginBtn" class="login-btn">Login</button>
 
             <div class="dropdown-content">
-                <a href="#" onclick="openLogin()">Employee Login</a>
+                <a href="javascript:void(0)" onclick="openOwnerLogin()">Employee Login</a>
                 <a href="#" onclick="openCustomerLogin()">Customer Login</a>
             </div>
         </div>
@@ -246,79 +246,46 @@
 
 </div>
 
-<!-- ================= SIGNUP FORM ================= -->
-
-<!-- LOGIN OVERLAY -->
-
+<!-- ================= Owner  SIGNUP FORM ================= -->
+<!-- OWNER LOGIN OVERLAY -->
 <div id="login-overlay">
-    <div class="login-wrapper">
 
-        <div class="login-left">
-            <span class="close-btn" onclick="closeLogin()">✕</span>
-            <h2>Login</h2>
+  <div class="login-wrapper">
 
-            <div class="input-box">
-                <input id="loginUsername" type="text" placeholder="Username">
-            </div>
+    <!-- <span class="close-btn" onclick="closeOwnerLogin()">✕</span> -->
 
-            <div class="input-box">
-                <input id="loginPassword" type="password" placeholder="Password">
-            </div>
+    <h2>Owner Login</h2>
 
-            <button onclick="loginUser()" class="login-btn">Login</button>
+    <input id="ownerId" type="text" placeholder="Enter Owner ID">
+    <input id="ownerPassword" type="password" placeholder="Password">
 
-            <p class="register-text">
-                Don't have an account?
-                <span onclick="openSignup()">Create Account</span>
-            </p>
-        </div>
+    <button onclick="ownerLogin()">Login</button>
 
-        <div class="login-right">
-            <h1>WELCOME BACK!</h1>
-        </div>
+    <p class="forgot-text" onclick="openForgot()">Forgot Password?</p>
 
-    </div>
+  </div>
+
 </div>
 
 
-<!-- SIGNUP OVERLAY -->
+<!-- FORGOT PASSWORD -->
+<div id="forgot-overlay">
 
-<div id="signup-overlay">
+  <div class="forgot-box">
 
-    <div class="signup-wrapper">
+    <!-- <span class="close-btn" onclick="closeForgot()">✕</span> -->
 
-        <span class="close-btn" onclick="closeSignup()">✕</span>
+    <h3>Verify Email</h3>
 
-        <h2>Create Account</h2>
+    <p id="maskedEmail">Email: abcd****@gmail.com</p>
 
-        <div class="signup-input">
-            <input id="signupName" type="text" placeholder="Full Name">
-        </div>
+    <button onclick="generateOTP()">Generate OTP</button>
 
-        <div class="signup-input">
-            <input id="signupEmail" type="email" placeholder="Email Address">
-        </div>
+    <input id="otpInput" type="text" placeholder="Enter OTP">
 
-        <div class="signup-input">
-            <input id="signupUsername" type="text" placeholder="Username">
-        </div>
+    <button onclick="verifyOTP()">Verify & Login</button>
 
-        <div class="signup-input">
-            <input id="signupPassword" type="password" placeholder="Password">
-        </div>
-
-        <div class="signup-input">
-            <input id="signupConfirmPassword" type="password" placeholder="Confirm Password">
-        </div>
-
-        <button onclick="createAccount()" class="signup-btn">Create Account</button>
-
-        <p class="login-link">
-            Already have an account?
-            <span onclick="backToLogin()">Login</span>
-        </p>
-
-    </div>
+  </div>
 
 </div>
 
