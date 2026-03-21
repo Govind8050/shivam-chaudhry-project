@@ -664,100 +664,128 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-// Owner LOgin All Details 
 
-const OWNER_ID = "admin123";
-const OWNER_PASSWORD = "secure@123";
-const OWNER_EMAIL = "owneremail@gmail.com";
+// Employee Login Start
+/* ================= CONFIG ================= */
+const OWNER_ID = "2313020292";
+const OWNER_PASSWORD = "8050";
+const OWNER_EMAIL = "gm085913@gmail.com";
 
-let generatedOTP = "";
+let generatedOTP = null;
 
-/* ================= OPEN CLOSE ================= */
+/* ================= OPEN / CLOSE ================= */
 
-function openOwnerLogin(){
-document.getElementById("login-overlay").style.display="flex";
+/* Open only when clicked */
+function openOwnerLogin() {
+  document.getElementById("ownerLoginOverlayX").style.display = "flex";
 }
 
-function closeOwnerLogin(){
-document.getElementById("login-overlay").style.display="none";
+/* Close both popups */
+function closeOwnerLogin() {
+  document.getElementById("ownerLoginOverlayX").style.display = "none";
+  document.getElementById("forgotOverlayX").style.display = "none";
 }
 
-function openForgot(){
-closeOwnerLogin();
-document.getElementById("forgot-overlay").style.display="flex";
+/* Forgot Password Open */
+function openForgotX() {
+  document.getElementById("ownerLoginOverlayX").style.display = "none";
+  document.getElementById("forgotOverlayX").style.display = "flex";
 
-/* MASK EMAIL */
-let email = OWNER_EMAIL;
-let masked = email.slice(0,4) + "****" + email.slice(email.indexOf("@"));
-document.getElementById("maskedEmail").innerText = "Email: " + masked;
+  /* MASK EMAIL */
+  let email = OWNER_EMAIL;
+  let masked = email.slice(0, 4) + "****" + email.slice(email.indexOf("@"));
+  document.getElementById("maskedEmailX").innerText = "Email: " + masked;
 }
 
-function closeForgot(){
-document.getElementById("forgot-overlay").style.display="none";
+/* Close Forgot */
+function closeForgotX() {
+  document.getElementById("forgotOverlayX").style.display = "none";
 }
 
 /* ================= LOGIN ================= */
 
-function ownerLogin(){
+async function ownerLogin() {
 
-const id = document.getElementById("ownerId").value;
-const pass = document.getElementById("ownerPassword").value;
+  const id = document.getElementById("ownerIdX").value;
+  const pass = document.getElementById("ownerPassX").value;
 
-if(id === OWNER_ID && pass === OWNER_PASSWORD){
+  const res = await fetch("http://localhost:5000/api/auth/owner-login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      id: id,
+      password: pass
+    })
+  });
 
-alert("Owner Login Success");
+  const data = await res.json();
 
-/* LOGIN COUNT */
-let count = localStorage.getItem("ownerLoginCount") || 0;
-count++;
-localStorage.setItem("ownerLoginCount", count);
+  if (data.success) {
 
-/* SAVE USER */
-localStorage.setItem("owner","true");
+    alert("Login Success");
 
-/* PROFILE SHOW */
-updateNavbar();
+    localStorage.setItem("owner", "true");
 
-closeOwnerLogin();
+    if (typeof updateNavbar === "function") {
+      updateNavbar();
+    }
 
-}else{
-alert("Invalid Owner Credentials");
-}
+    closeOwnerLogin();
 
+  } else {
+    alert(data.message);
+  }
 }
 
 /* ================= OTP ================= */
+async function generateOTP() {
 
-function generateOTP(){
+  const res = await fetch("http://localhost:5000/api/auth/send-otp", {
+    method: "POST"
+  });
 
-generatedOTP = Math.floor(1000 + Math.random()*9000);
+  const data = await res.json();
 
-alert("OTP sent to email: " + generatedOTP); // demo
-
-/* REAL: send from backend */
+  if (data.success) {
+    generatedOTP = data.otp;
+    alert("OTP sent to your email");
+  } else {
+    alert("Failed to send OTP");
+  }
 }
 
-function verifyOTP(){
+function verifyOTP() {
 
-const userOTP = document.getElementById("otpInput").value;
+  const userOTP = document.getElementById("otpInputX").value;
 
-if(userOTP == generatedOTP){
+  if (userOTP == generatedOTP) {
 
-alert("OTP Verified - Login Success");
+    alert("OTP Verified - Login Success");
 
-/* LOGIN COUNT */
-let count = localStorage.getItem("ownerLoginCount") || 0;
-count++;
-localStorage.setItem("ownerLoginCount", count);
+    /* LOGIN COUNT */
+    let count = localStorage.getItem("ownerLoginCount") || 0;
+    count++;
+    localStorage.setItem("ownerLoginCount", count);
 
-localStorage.setItem("owner","true");
+    localStorage.setItem("owner", "true");
 
-updateNavbar();
+    if (typeof updateNavbar === "function") {
+      updateNavbar();
+    }
 
-closeForgot();
+    closeOwnerLogin();
 
-}else{
-alert("Invalid OTP");
+  } else {
+    alert("Invalid OTP");
+  }
 }
 
-}
+/* ================= IMPORTANT FIX ================= */
+
+/* Page load par popup hide rahe */
+window.onload = function () {
+  document.getElementById("ownerLoginOverlayX").style.display = "none";
+  document.getElementById("forgotOverlayX").style.display = "none";
+};

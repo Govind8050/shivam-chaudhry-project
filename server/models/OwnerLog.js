@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const ownerLogSchema = new mongoose.Schema({
   ownerId: String,
   date: String,
   loginTime: {
@@ -9,4 +9,4 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("OwnerLog", ownerLogSchema);

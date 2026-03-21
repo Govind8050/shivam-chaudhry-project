@@ -1,12 +1,16 @@
 const express = require("express");
 const router = express.Router();
 
+/* SINGLE IMPORT */
 const authController = require("../controllers/authController");
 
-router.post("/signup",authController.signup);
-router.post("/login",authController.login);
+/* OWNER ROUTES */
+router.post("/owner-login", authController.ownerLogin);
+router.get("/login-stats", authController.getLoginStats);
+router.post("/send-otp", authController.sendOTP);
 
-router.post("/customer-register",authController.registerCustomer);
-router.post("/customer-login",authController.loginCustomer);
+/* CUSTOMER ROUTES */
+router.post("/customer-register", authController.registerCustomer);
+router.post("/customer-login", authController.loginCustomer);
 
-module.exports = router;   
+module.exports = router;

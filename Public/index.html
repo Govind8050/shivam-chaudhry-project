@@ -247,48 +247,45 @@
 </div>
 
 <!-- ================= Owner  SIGNUP FORM ================= -->
-<!-- OWNER LOGIN OVERLAY -->
-<div id="login-overlay">
+<!-- LOGIN -->
+<div id="ownerLoginOverlayX">
 
-  <div class="login-wrapper">
-
-    <!-- <span class="close-btn" onclick="closeOwnerLogin()">✕</span> -->
+  <div class="ownerLoginBoxX">
+    <span class="close-btn" onclick="closeOwnerLogin()">✕</span>
 
     <h2>Owner Login</h2>
 
-    <input id="ownerId" type="text" placeholder="Enter Owner ID">
-    <input id="ownerPassword" type="password" placeholder="Password">
+    <input id="ownerIdX" type="text" placeholder="Enter Owner ID">
+    <input id="ownerPassX" type="password" placeholder="Password">
 
     <button onclick="ownerLogin()">Login</button>
 
-    <p class="forgot-text" onclick="openForgot()">Forgot Password?</p>
+    <p class="forgotTextX" onclick="openForgotX()">Forgot Password?</p>
 
   </div>
 
 </div>
 
 
-<!-- FORGOT PASSWORD -->
-<div id="forgot-overlay">
+<!-- FORGOT -->
+<div id="forgotOverlayX">
 
-  <div class="forgot-box">
-
-    <!-- <span class="close-btn" onclick="closeForgot()">✕</span> -->
+  <div class="forgotBoxX">
+    <span class="close-btn" onclick="closeOwnerLogin()">✕</span>
 
     <h3>Verify Email</h3>
 
-    <p id="maskedEmail">Email: abcd****@gmail.com</p>
+    <p id="maskedEmailX">Email: abcd****@gmail.com</p>
 
     <button onclick="generateOTP()">Generate OTP</button>
 
-    <input id="otpInput" type="text" placeholder="Enter OTP">
+    <input id="otpInputX" type="text" placeholder="Enter OTP">
 
     <button onclick="verifyOTP()">Verify & Login</button>
 
   </div>
 
 </div>
-
 <!-- Profile popup -->
 
 <div id="profilePanel" class="profile-panel">
