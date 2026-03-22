@@ -364,22 +364,23 @@ if(data.success){
 
 alert("Login Successful");
 
-/* SAVE USER */
-
-localStorage.setItem("user",JSON.stringify(data.user));
+/* SAVE USER (UPDATED) */
+localStorage.setItem("user",JSON.stringify({
+name: data.user.name,
+email: data.user.email,
+MobileNumber: data.user.username,
+UserName: data.user.mobile,     // ✅ added
+address: data.user.address    // ✅ added
+}));
 
 /* NAVBAR UPDATE */
-
 updateNavbar();
 
 /* CLOSE LOGIN */
-
 document.getElementById("login-overlay").style.display="none";
 
 }else{
-
 alert(data.message);
-
 }
 
 }
@@ -419,9 +420,11 @@ document.getElementById("loginBtn").style.display="none";
 
 document.getElementById("profileArea").style.display="inline-block";
 
-document.getElementById("pName").innerText = user.name;
-document.getElementById("pEmail").innerText = user.email;
-document.getElementById("pUsername").innerText = user.username;
+/* SAFE DATA SHOW */
+document.getElementById("pName").innerText = user.name || "";
+document.getElementById("pEmail").innerText = user.email || "";
+document.getElementById("pUsername").innerText = user.username || "";
+document.getElementById("pAddress").innerText = user.address || "";
 
 }
 
@@ -551,7 +554,9 @@ method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-body:JSON.stringify({ email, password })
+body:JSON.stringify({
+email,password
+})
 })
 
 const data = await res.json()
@@ -560,20 +565,17 @@ if(data.success){
 
 alert("Customer Login Successful")
 
-// ✅ SAVE USER
-localStorage.setItem("user", JSON.stringify({
+/* ✅ CORRECT SAVE */
+localStorage.setItem("user",JSON.stringify({
 name: data.customer.name,
 email: data.customer.email,
-username: data.customer.mobile
+username: data.customer.mobile,   // mobile = username (as per your logic
+address: data.customer.address
 }))
 
-// ✅ UPDATE NAVBAR
 updateNavbar()
-
-// ✅ AUTO OPEN PROFILE
 toggleProfile()
 
-// ✅ CLOSE POPUPS
 closeLoginPopup()
 closeCustomerForm()
 
@@ -608,16 +610,13 @@ const email = document.getElementById("customerEmail").value
 const password = document.getElementById("customerPassword").value
 
 const res = await fetch("/api/auth/customer-login",{
-
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-
 body:JSON.stringify({
 email,password
 })
-
 })
 
 const data = await res.json()
@@ -626,31 +625,26 @@ if(data.success){
 
 alert("Customer Login Successful")
 
-/* SAVE CUSTOMER */
-
+/* ✅ FINAL CORRECT SAVE */
 localStorage.setItem("user",JSON.stringify({
-name:data.customer.name,
-email:data.customer.email,
-username:data.customer.mobile
+name: data.customer.name,
+email: data.customer.email,
+username: data.customer.mobile,   // mobile = username
+mobile: data.customer.mobile,
+address: data.customer.address    // ✅ THIS IS THE MAIN FIX
 }))
 
-/* UPDATE NAVBAR */
-
 updateNavbar()
-
-/* CLOSE POPUPS */
+toggleProfile()
 
 closeLoginPopup()
 closeCustomerForm()
 
 }else{
-
 alert(data.message)
-
 }
 
 }
-
 document.addEventListener("DOMContentLoaded", () => {
 
 
@@ -733,7 +727,9 @@ localStorage.setItem("owner", "true");
 localStorage.setItem("user", JSON.stringify({
 name: "Owner",
 email: "Anastik@gmail.com",
-username: id
+username: id,
+mobile: "9693135991",
+address: "Kanthudih Hanuman, Mandir."
 }));
 
 // ✅ NAVBAR UPDATE
