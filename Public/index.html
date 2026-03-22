@@ -67,7 +67,7 @@
 
 <!-- PRODUCTS -->
 <section class="products">
-    <h2 id="order">Our Premium Products (Click for Details)</h2>
+    <h2 id="productDiscription">Our Premium Products (Click for Details)</h2>
 
     <div class="product-grid">
         <button class="product-btn" onclick="showDetail('plate')">Paper Plates</button>
@@ -193,6 +193,23 @@
 
 <!-- ORDER SECTION -->
 <section class="products page-section" id="order" style="display:none;">
+    <div id="zxEcomWrapper">
+
+    <h2 class="zxTitle">🛒 Order Products</h2>
+
+    <!-- PRODUCT LIST -->
+    <div class="zxGrid" id="zxProductList"></div>
+
+    <!-- PRODUCT DETAIL -->
+    <div class="zxDetailBox" id="zxDetailView"></div>
+
+    <!-- CART -->
+    <div class="zxCartBox" id="zxCartView"></div>
+
+    <!-- CHECKOUT -->
+    <div class="zxCheckoutBox" id="zxCheckoutView"></div>
+
+</div>
 </section>
 
 <!-- ADDRESS SECTION -->
@@ -248,7 +265,7 @@
 
 <!-- ================= Owner  SIGNUP FORM ================= -->
 <!-- LOGIN -->
-<div id="ownerLoginOverlayX">
+<div id="ownerLoginOverlayX" **style="display: none;"**>
 
   <div class="ownerLoginBoxX">
     <span class="close-btn" onclick="closeOwnerLogin()">✕</span>
@@ -268,7 +285,7 @@
 
 
 <!-- FORGOT -->
-<div id="forgotOverlayX">
+<div id="forgotOverlayX" **style="display: none;"**>
 
   <div class="forgotBoxX">
     <span class="close-btn" onclick="closeOwnerLogin()">✕</span>
@@ -400,6 +417,8 @@ Login
 
 </div>
  <!-- Customer Login close -->
+
+ 
 <footer class="footer">
     <p>© 2026 Anastik Manufacturing Pvt Ltd. All Rights Reserved.</p>
 </footer>
