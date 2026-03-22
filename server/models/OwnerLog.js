@@ -4,8 +4,12 @@ const ownerLogSchema = new mongoose.Schema({
   ownerId: String,
   date: String,
   loginTime: {
-    type: Date,
-    default: Date.now
+    type: String,
+    default: () => {
+      return new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata"
+      });
+    }
   }
 });
 

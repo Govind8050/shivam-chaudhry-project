@@ -547,35 +547,38 @@ const email = document.getElementById("customerEmail").value
 const password = document.getElementById("customerPassword").value
 
 const res = await fetch("/api/auth/customer-login",{
-
 method:"POST",
 headers:{
 "Content-Type":"application/json"
 },
-
-body:JSON.stringify({
-email,password
-})
-
+body:JSON.stringify({ email, password })
 })
 
 const data = await res.json()
 
 if(data.success){
 
-document.getElementById("pName").innerText = data.customer.name
-document.getElementById("pEmail").innerText = data.customer.email
-document.getElementById("pUsername").innerText = data.customer.mobile
+alert("Customer Login Successful")
 
-document.getElementById("profilePanel").style.display="block"
+// ✅ SAVE USER
+localStorage.setItem("user", JSON.stringify({
+name: data.customer.name,
+email: data.customer.email,
+username: data.customer.mobile
+}))
 
+// ✅ UPDATE NAVBAR
+updateNavbar()
+
+// ✅ AUTO OPEN PROFILE
+toggleProfile()
+
+// ✅ CLOSE POPUPS
 closeLoginPopup()
 closeCustomerForm()
 
 }else{
-
 alert(data.message)
-
 }
 
 }
@@ -706,37 +709,46 @@ function closeForgotX() {
 
 async function ownerLogin() {
 
-  const id = document.getElementById("ownerIdX").value;
-  const pass = document.getElementById("ownerPassX").value;
+const id = document.getElementById("ownerIdX").value;
+const pass = document.getElementById("ownerPassX").value;
 
-  const res = await fetch("http://localhost:5000/api/auth/owner-login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      id: id,
-      password: pass
-    })
-  });
+const res = await fetch("http://localhost:5000/api/auth/owner-login", {
+method: "POST",
+headers: {
+"Content-Type": "application/json"
+},
+body: JSON.stringify({ id, password: pass })
+});
 
-  const data = await res.json();
+const data = await res.json();
 
-  if (data.success) {
+if (data.success) {
 
-    alert("Login Success");
+alert("Login Success");
 
-    localStorage.setItem("owner", "true");
+// ✅ OWNER FLAG
+localStorage.setItem("owner", "true");
 
-    if (typeof updateNavbar === "function") {
-      updateNavbar();
-    }
+// ✅ SAVE USER (PROFILE KE LIYE)
+localStorage.setItem("user", JSON.stringify({
+name: "Owner",
+email: "Anastik@gmail.com",
+username: id
+}));
 
-    closeOwnerLogin();
+// ✅ NAVBAR UPDATE
+updateNavbar();
 
-  } else {
-    alert(data.message);
-  }
+// ✅ AUTO OPEN PROFILE
+toggleProfile();
+
+// ✅ CLOSE LOGIN
+closeOwnerLogin();
+
+} else {
+alert(data.message);
+}
+
 }
 
 /* ================= OTP ================= */
@@ -758,30 +770,41 @@ async function generateOTP() {
 
 function verifyOTP() {
 
-  const userOTP = document.getElementById("otpInputX").value;
+const userOTP = document.getElementById("otpInputX").value;
 
-  if (userOTP == generatedOTP) {
+if (userOTP == generatedOTP) {
 
-    alert("OTP Verified - Login Success");
+alert("OTP Verified - Login Success");
 
-    /* LOGIN COUNT */
-    let count = localStorage.getItem("ownerLoginCount") || 0;
-    count++;
-    localStorage.setItem("ownerLoginCount", count);
+// ✅ COUNT
+let count = localStorage.getItem("ownerLoginCount") || 0;
+count++;
+localStorage.setItem("ownerLoginCount", count);
 
-    localStorage.setItem("owner", "true");
+// ✅ OWNER LOGIN
+localStorage.setItem("owner", "true");
 
-    if (typeof updateNavbar === "function") {
-      updateNavbar();
-    }
+// ✅ SAVE USER
+localStorage.setItem("user", JSON.stringify({
+name: "Owner",
+email: "Anastik@gmail.com",
+OwnerId: "Owner",
+}));
 
-    closeOwnerLogin();
+// ✅ NAVBAR UPDATE
+updateNavbar();
 
-  } else {
-    alert("Invalid OTP");
-  }
+// ✅ AUTO PROFILE OPEN
+toggleProfile();
+
+// ✅ CLOSE
+closeOwnerLogin();
+
+} else {
+alert("Invalid OTP");
 }
 
+}
 /* ================= IMPORTANT FIX ================= */
 
 /* Page load par popup hide rahe */
@@ -789,3 +812,15 @@ window.onload = function () {
   document.getElementById("ownerLoginOverlayX").style.display = "none";
   document.getElementById("forgotOverlayX").style.display = "none";
 };
+window.addEventListener("load", function(){
+
+updateNavbar();
+
+// OWNER POPUP HIDE
+const owner = document.getElementById("ownerLoginOverlayX");
+const forgot = document.getElementById("forgotOverlayX");
+
+if(owner) owner.style.display = "none";
+if(forgot) forgot.style.display = "none";
+
+});
