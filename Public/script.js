@@ -710,7 +710,7 @@ async function ownerLogin() {
 const id = document.getElementById("ownerIdX").value;
 const pass = document.getElementById("ownerPassX").value;
 
-const res = await fetch("http://localhost:5000/api/auth/owner-login", {
+const res = await fetch("/api/auth/owner-login", {
 method: "POST",
 headers: {
 "Content-Type": "application/json"
