@@ -826,31 +826,23 @@ if(forgot) forgot.style.display = "none";
 });
 
 
-const zxProducts = [...Array(20)].map((_, i) => ({
-    id: i,
-    name: "Product " + (i + 1),
-    price: 100 + i * 20,
-    desc: "Eco friendly high quality product",
-    img: "Eating_Plate.jpg"
-}));
-
+// All Order Section
+let zxHistory = [];
 let zxCart = [];
-
+let zxCurrentProductId = null;
 /* ================= INIT ONLY WHEN ORDER CLICK ================= */
 function zxInitOrderSection(){
-
     const list = document.getElementById("zxProductList");
     if(!list) return;
 
-    // ✅ already loaded → dobara load nahi
     if(list.innerHTML.trim() !== "") return;
 
     zxLoadProducts();
+    zxUpdateCartCount(); // ✅ important
 
-    const ids = ["zxDetailView", "zxCartView", "zxCheckoutView"];
-    ids.forEach(id => {
+    ["zxDetailView","zxCartView","zxCheckoutView"].forEach(id=>{
         const el = document.getElementById(id);
-        if (el) el.style.display = "none";
+        if(el) el.style.display = "none";
     });
 }
 
@@ -872,30 +864,165 @@ function zxLoadProducts() {
     });
 }
 
-
 /* ================= SHOW DETAIL ================= */
 function zxShowDetail(id) {
-    const p = zxProducts[id];
+
+    zxHistory.push("products");
+    zxCurrentProductId = id; 
+
+    const p = zxProducts.find(item => item.id === id);
 
     const list = document.getElementById("zxProductList");
     const box = document.getElementById("zxDetailView");
-
-    if (!list || !box) return;
 
     list.style.display = "none";
     box.style.display = "block";
 
     box.innerHTML = `
-        <h2>${p.name}</h2>
-        <img src="${p.img}" width="200">
-        <p>${p.desc}</p>
-        <h3>₹${p.price}</h3>
+<div class="zxDetailContainer">
+
+    <!-- LEFT -->
+    <div class="zxLeft">
+        <img src="${p.img}" class="zxMainImg">
+    </div>
+
+    <!-- RIGHT -->
+    <div class="zxRight">
+
+        <h2 class="zxProductTitle">${p.name}</h2>
+        <p class="zxDesc">${p.desc}</p>
+
+        <div class="zxPriceBox">
+            <span class="zxDiscount">82% OFF</span>
+            <span class="zxOldPrice">₹${p.price + 800}</span>
+            <span class="zxPrice">₹${p.price}</span>
+        </div>
 
         <input type="number" id="zxQty" class="zxInput" value="1" min="1">
 
-        <button class="zxBtn" onclick="zxAddToCart(${p.id})">Add to Cart</button>
-        <button class="zxBtn" onclick="zxBackToProducts()">⬅ Back</button>
-    `;
+        <div class="zxBtnGroup">
+            <button class="zxBtn" onclick="zxAddToCart(${p.id})">Add to Cart</button>
+           <button class="zxBtn buyBtn" onclick="zxBuyNow(${p.id})">Buy Now</button>
+            <button class="zxBtn backBtn" onclick="zxGoBack()">⬅ Back</button>
+        </div>
+
+        <!-- DELIVERY BOX -->
+        <div class="zxDeliveryBox">
+            <h3>📦 Delivery Details</h3>
+
+            <div class="zxAddress">
+                <input type="text" id="zxAddressInput" placeholder="Enter your address" class="zxInput">
+                <button class="zxBtn smallBtn" onclick="zxGetLocation()">📍 Use My Location</button>
+            </div>
+
+            <p id="zxLiveAddress">No location selected</p>
+
+            <div class="zxDeliveryInfo">
+                <div>🚚 Delivery in 3-5 Days</div>
+                <div>💰 Cash on Delivery Available</div>
+                <div>🔁 7-Day Easy Return</div>
+                <div>✔ Verified Seller</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- HIGHLIGHTS -->
+<div class="zxHighlights">
+    <h3>Product Highlights</h3>
+
+    <div class="zxHighlightGrid">
+        <div><span>Material</span><b>Stainless Steel</b></div>
+        <div><span>Type</span><b>Eco Friendly</b></div>
+        <div><span>Reusable</span><b>Yes</b></div>
+        <div><span>Dishwasher Safe</span><b>Yes</b></div>
+        <div><span>Warranty</span><b>6 Months</b></div>
+        <div><span>Brand</span><b>JS Tech</b></div>
+    </div>
+</div>
+<!-- SUGGESTIONS -->
+<div class="zxSuggest">
+    <h3>Similar Products</h3>
+
+    <div class="zxGrid">
+        ${
+            zxProducts
+            .filter(item => item.id !== p.id)
+            .map(item => `
+                <div class="zxCard" onclick="zxShowDetail(${item.id})">
+                    <img src="${item.img}">
+                    <h3>${item.name}</h3>
+                    <p>₹${item.price}</p>
+                </div>
+            `).join("")
+        }
+    </div>
+</div>
+`;
+}
+let total = 0;
+
+zxCart.forEach(item => {
+    total += item.price * item.qty;
+});
+
+html += `<h3>Total: ₹${total}</h3>`;
+
+function zxUpdateCartCount(){
+    const count = document.getElementById("zxCartCount");
+
+    let totalQty = 0;
+    zxCart.forEach(item => totalQty += item.qty);
+
+    if(count){
+        count.innerText = totalQty;
+    }
+}
+
+function zxBuyNow(id){
+
+    const product = zxProducts.find(p => p.id === id);
+    const qty = parseInt(document.getElementById("zxQty").value) || 1;
+
+    zxCart = [{ ...product, qty }];
+
+    zxUpdateCartCount();
+
+    zxHistory.push("detail"); // ✅ correct
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    zxCheckout();
+}
+
+
+function zxGetLocation(){
+
+    const output = document.getElementById("zxLiveAddress");
+
+    if(!navigator.geolocation){
+        output.innerText = "Location not supported";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(async position => {
+
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+
+        // Reverse Geocoding API (OpenStreetMap)
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+        const data = await res.json();
+
+        const address = data.display_name;
+
+        document.getElementById("zxAddressInput").value = address;
+        output.innerText = "📍 " + address;
+
+    }, () => {
+        output.innerText = "Location permission denied";
+    });
 }
 
 
@@ -929,55 +1056,105 @@ function zxBackToProducts() {
 
 
 /* ================= ADD TO CART ================= */
-function zxAddToCart(id) {
-    const qtyInput = document.getElementById("zxQty");
-    const qty = qtyInput ? parseInt(qtyInput.value) : 1;
+function zxAddToCart(id){
 
-    zxCart.push({ ...zxProducts[id], qty });
+    const qty = parseInt(document.getElementById("zxQty").value) || 1;
+    const product = zxProducts.find(p => p.id === id);
 
-    zxShowCart();
+    const existing = zxCart.find(item => item.id === id);
+
+    if(existing){
+        existing.qty += qty;
+    } else {
+        zxCart.push({ ...product, qty });
+    }
+
+    zxUpdateCartCount();
+    zxShowToast("✅ Added to cart successfully!");
+
+    // ❌ yahan zxCheckout() call nahi hona chahiye
 }
 
+function zxShowToast(msg){
 
+    let toast = document.createElement("div");
+    toast.innerText = msg;
+    toast.className = "zxToast";
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.remove();
+    }, 2000);
+}
 /* ================= SHOW CART ================= */
 function zxShowCart() {
 
     const detail = document.getElementById("zxDetailView");
     const cartBox = document.getElementById("zxCartView");
 
-    if (!cartBox) return;
+    zxHistory.push("detail");
 
     if (detail) detail.style.display = "none";
     cartBox.style.display = "block";
 
     let html = "<h2>Your Cart</h2>";
 
+    let total = 0;
+
     zxCart.forEach(item => {
-        html += `<p>${item.name} × ${item.qty}</p>`;
+        total += item.price * item.qty;
+
+        html += `
+            <p>
+                ${item.name} × ${item.qty}
+                <span>₹${item.price * item.qty}</span>
+            </p>
+        `;
     });
+
+    html += `<h3>Total: ₹${total}</h3>`;
 
     html += `
         <button class="zxBtn" onclick="zxCheckout()">Proceed to Checkout</button>
-        <button class="zxBtn" onclick="zxBackToProducts()">⬅ Back</button>
+        <button class="zxBtn backBtn" onclick="zxGoBack()">⬅ Back</button>
     `;
 
     cartBox.innerHTML = html;
 }
 
-
 /* ================= CHECKOUT ================= */
 function zxCheckout() {
 
+    if(zxCart.length === 0){
+        zxShowToast("⚠️ Cart is empty!");
+        return;
+    }
+
+    zxHistory.push("cart");
+
+    const list = document.getElementById("zxProductList");
+    const detail = document.getElementById("zxDetailView");
     const cart = document.getElementById("zxCartView");
     const chk = document.getElementById("zxCheckoutView");
 
-    if (!chk) return;
+    // 🔥 sab hide (IMPORTANT)
+    list.style.display = "none";
+    detail.style.display = "none";
+    cart.style.display = "none";
 
-    if (cart) cart.style.display = "none";
     chk.style.display = "block";
 
+    // 🔥 scroll top
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    let total = 0;
+    zxCart.forEach(item => total += item.price * item.qty);
+
     chk.innerHTML = `
-        <h2>Enter Address</h2>
+        <h2>Checkout</h2>
+
+        <h3>Total Amount: ₹${total}</h3>
 
         <input class="zxInput" placeholder="Full Name">
         <input class="zxInput" placeholder="Address">
@@ -990,10 +1167,41 @@ function zxCheckout() {
             <option>Net Banking</option>
         </select>
 
-        <button class="zxBtn" onclick="zxPlaceOrder()">Place Order</button>
+        <button class="zxBtn buyBtn" onclick="zxPlaceOrder()">Place Order</button>
+        <button class="zxBtn backBtn" onclick="zxGoBack()">⬅ Back</button>
     `;
 }
 
+function zxGoBack(){
+
+    const last = zxHistory.pop();
+
+    const list = document.getElementById("zxProductList");
+    const detail = document.getElementById("zxDetailView");
+    const cart = document.getElementById("zxCartView");
+    const checkout = document.getElementById("zxCheckoutView");
+
+    // sab hide
+    list.style.display = "none";
+    detail.style.display = "none";
+    cart.style.display = "none";
+    checkout.style.display = "none";
+
+    if(!last){
+        list.style.display = "grid";
+        return;
+    }
+
+    if(last === "products"){
+        list.style.display = "grid";
+    }
+    else if(last === "detail"){
+        zxShowDetail(zxCurrentProductId); // 🔥 RELOAD DETAIL
+    }
+    else if(last === "cart"){
+        zxShowCart(); // 🔥 RELOAD CART
+    }
+}
 
 /* ================= PLACE ORDER ================= */
 function zxPlaceOrder() {
