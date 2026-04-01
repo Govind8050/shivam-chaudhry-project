@@ -921,26 +921,88 @@ cursor:pointer;
     cursor:pointer;
 } /*signup overlay close*/
 
-.img-options{
-    display: none;              /* 👈 hidden by default */
-    position: absolute;
-    top: 120px;                 /* image के नीचे */
-    left: 50%;
-    transform: translateX(-50%);
-    flex-direction: column;
-    gap: 8px;
-    background: #111;
-    padding: 10px;
-    border-radius: 10px;
-    z-index: 999;
+.profile-header{
+    position: relative;
+    text-align: center;
 }
 
+/* 🔥 IMAGE HOVER EFFECT */
+.profile-big{
+    width:80px;
+    height:80px;
+    border-radius:50%;
+    border:3px solid white;
+    margin-bottom:10px;
+    cursor:pointer;
+    transition:0.3s;
+}
+
+.profile-big:hover{
+    transform: scale(1.08);
+    box-shadow: 0 0 15px rgba(0,217,255,0.7);
+}
+
+/* 🔥 DROPDOWN BOX */
+.img-options{
+    position: absolute;
+    top: 95px; /* image ke just niche */
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(10px);
+
+    padding: 12px;
+    border-radius: 12px;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: all 0.3s ease;
+    z-index: 9999;
+
+    min-width: 160px;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+}
+
+/* 🔥 ACTIVE STATE */
+.img-options.active{
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* 🔥 BUTTON STYLE */
 .img-options button{
-    background: #00d9ff;
+    background: linear-gradient(135deg,#00d9ff,#00ffd5);
     border: none;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: bold;
+    color: black;
+
+    transition: 0.3s;
+}
+.img-options::before{
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0,0,0,0.85) transparent;
+}
+/* 🔥 HOVER EFFECT */
+.img-options button:hover{
+    transform: scale(1.05);
+    background: linear-gradient(135deg,#00ffd5,#00d9ff);
 }
 
 /* Profile */
@@ -1046,6 +1108,7 @@ nav{
 .profile-overlay.active{
 display:block;
 }
+
 
 /* Dropdown login */
 /* ===== LOGIN DROPDOWN FIX ===== */

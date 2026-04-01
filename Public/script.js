@@ -967,7 +967,7 @@ zxCart.forEach(item => {
     total += item.price * item.qty;
 });
 
-html += `<h3>Total: ₹${total}</h3>`;
+let html = `<h3>Total: ₹${total}</h3>`;
 
 function zxUpdateCartCount(){
     const count = document.getElementById("zxCartCount");
@@ -1219,6 +1219,7 @@ function showImgOptions(){
     box.style.display = box.style.display === "flex" ? "none" : "flex";
 }
 
+
 document.addEventListener("DOMContentLoaded", function(){
 
     const profileImg = document.querySelector(".profile-big");
@@ -1232,118 +1233,124 @@ document.addEventListener("DOMContentLoaded", function(){
     fileInput.style.display = "none";
     document.body.appendChild(fileInput);
 
-    // 👉 CAMERA ELEMENTS (NEW)
-    let video = null;
-    let canvas = null;
-    let stream = null;
-
-    // 👉 CLICK → SHOW OPTIONS
-    if(profileImg){
+    /* =========================
+       🔥 CLICK → SHOW OPTIONS
+    ========================= */
+    if(profileImg && imgOptions){
         profileImg.addEventListener("click", function(e){
             e.stopPropagation();
-
-            imgOptions.style.display =
-                imgOptions.style.display === "flex" ? "none" : "flex";
+            imgOptions.classList.toggle("active");
         });
     }
 
-    // 👉 OUTSIDE CLICK
+    /* =========================
+       🔥 CLICK INSIDE OPTIONS
+    ========================= */
+    if(imgOptions){
+        imgOptions.addEventListener("click", function(e){
+            e.stopPropagation();
+        });
+    }
+
+    /* =========================
+       🔥 CLICK OUTSIDE → CLOSE
+    ========================= */
     document.addEventListener("click", function(){
-        imgOptions.style.display = "none";
+        if(imgOptions){
+            imgOptions.classList.remove("active");
+        }
     });
 
-    // ============================
-    // 📸 REAL CAMERA OPEN
-    // ============================
-   window.openCamera = async function(){
+    /* =========================
+       📸 CAMERA
+    ========================= */
+    window.openCamera = async function(){
 
-    try{
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        try{
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
 
-        // 🔥 Overlay
-        const overlay = document.createElement("div");
-        overlay.className = "camera-overlay";
+            const overlay = document.createElement("div");
+            overlay.className = "camera-overlay";
 
-        // 🎥 Video
-        const video = document.createElement("video");
-        video.className = "camera-video";
-        video.srcObject = stream;
-        video.autoplay = true;
+            const video = document.createElement("video");
+            video.className = "camera-video";
+            video.srcObject = stream;
+            video.autoplay = true;
 
-        // 📸 Capture Button
-        const captureBtn = document.createElement("button");
-        captureBtn.className = "capture-btn";
-        captureBtn.innerText = "📸 Capture";
+            const captureBtn = document.createElement("button");
+            captureBtn.className = "capture-btn";
+            captureBtn.innerText = "📸 Capture";
 
-        // ❌ Close Button
-        const closeBtnP = document.createElement("button");
-        closeBtnP.className = "close-btn";
-        closeBtnP.innerText = "❌ Close";
+            const closeBtnP = document.createElement("button");
+            closeBtnP.className = "close-btn";
+            closeBtnP.innerText = "❌ Close";
 
-        // 🎛 Controls
-        const controls = document.createElement("div");
-        controls.className = "camera-controls";
+            const controls = document.createElement("div");
+            controls.className = "camera-controls";
 
-        controls.appendChild(captureBtn);
-        controls.appendChild(closeBtnP);
+            controls.appendChild(captureBtn);
+            controls.appendChild(closeBtnP);
 
-        overlay.appendChild(video);
-        overlay.appendChild(controls);
+            overlay.appendChild(video);
+            overlay.appendChild(controls);
 
-        document.body.appendChild(overlay);
+            document.body.appendChild(overlay);
 
-        // 📸 Capture Logic
-        captureBtn.onclick = function(){
+            // 📸 Capture
+            captureBtn.onclick = function(){
 
-            const canvas = document.createElement("canvas");
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+                const canvas = document.createElement("canvas");
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
 
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0);
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0);
 
-            const imgData = canvas.toDataURL("image/png");
+                const imgData = canvas.toDataURL("image/png");
 
-            document.querySelector(".profile-big").src = imgData;
-            document.querySelector(".profile-icon").src = imgData;
+                if(profileImg) profileImg.src = imgData;
+                if(profileIcon) profileIcon.src = imgData;
 
-            const user = JSON.parse(localStorage.getItem("user"));
-            const userKey = user.mobile || user.username || user.email;
+                const user = JSON.parse(localStorage.getItem("user"));
+                if(user){
+                    const userKey = user.mobile || user.username || user.email;
+                    localStorage.setItem("profile_" + userKey, imgData);
+                }
 
-            localStorage.setItem("profile_" + userKey, imgData);
+                stream.getTracks().forEach(track => track.stop());
+                overlay.remove();
+            };
 
-            stream.getTracks().forEach(track => track.stop());
-            overlay.remove();
+            // ❌ Close
+            closeBtnP.onclick = function(){
+                stream.getTracks().forEach(track => track.stop());
+                overlay.remove();
+            };
+
+        }catch(err){
+            alert("Camera not allowed");
         }
+    };
 
-        // ❌ Close
-        closeBtnP.onclick = function(){
-            stream.getTracks().forEach(track => track.stop());
-            overlay.remove();
-        }
-
-    }catch(err){
-        alert("Camera not allowed");
-    }
-}
-
-    // ============================
-    // 🖼️ GALLERY
-    // ============================
+    /* =========================
+       🖼️ GALLERY
+    ========================= */
     window.openGallery = function(){
-        fileInput.removeAttribute("capture");
         fileInput.click();
-    }
+    };
 
-    // 👉 USER KEY
+    /* =========================
+       🔑 USER KEY
+    ========================= */
     function getUserKey(){
         const user = JSON.parse(localStorage.getItem("user"));
         if(!user) return null;
-
         return user.mobile || user.username || user.email;
     }
 
-    // 👉 GALLERY IMAGE SAVE
+    /* =========================
+       🖼️ SAVE IMAGE
+    ========================= */
     fileInput.addEventListener("change", function(e){
 
         const file = e.target.files[0];
@@ -1363,13 +1370,15 @@ document.addEventListener("DOMContentLoaded", function(){
                 if(userKey){
                     localStorage.setItem("profile_" + userKey, imgData);
                 }
-            }
+            };
 
             reader.readAsDataURL(file);
         }
     });
 
-    // 👉 LOAD IMAGE
+    /* =========================
+       🔄 LOAD IMAGE
+    ========================= */
     function loadProfileImage(){
 
         const userKey = getUserKey();

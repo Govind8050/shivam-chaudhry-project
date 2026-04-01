@@ -13,4 +13,7 @@ router.post("/send-otp", authController.sendOTP);
 router.post("/customer-register", authController.registerCustomer);
 router.post("/customer-login", authController.loginCustomer);
 
+// Image Added
+router.post("/save-profile-image", authController.saveProfileImage);
+
 module.exports = router;

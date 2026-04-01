@@ -9,7 +9,12 @@ const ownerLogSchema = new mongoose.Schema({
       return new Date().toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata"
       });
+    },
+     profileImage: {
+        type: String,
+        default: ""
     }
+
   }
 });
 

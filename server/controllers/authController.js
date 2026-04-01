@@ -12,7 +12,6 @@ const OWNER_PASSWORD = "8050";
 
 exports.ownerLogin = async (req, res) => {
   try {
-    console.log("BODY:", req.body);
 
     const { id, password } = req.body;
 
@@ -33,12 +32,18 @@ exports.ownerLogin = async (req, res) => {
           date: today
         });
       } catch (dbErr) {
-        console.log("🔥 DB ERROR:", dbErr);
+        console.log("DB ERROR:", dbErr);
       }
 
       return res.json({
         success: true,
-        message: "Login success"
+        message: "Login success",
+        user: {
+          _id: "owner123",
+          name: "Owner",
+          email: "owner@gmail.com",
+          profileImage: ""   // ✅ added
+        }
       });
     }
 
@@ -48,7 +53,7 @@ exports.ownerLogin = async (req, res) => {
     });
 
   } catch (err) {
-    console.log("🔥 SERVER ERROR:", err);
+    console.log("SERVER ERROR:", err);
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -60,6 +65,7 @@ exports.ownerLogin = async (req, res) => {
 
 exports.getLoginStats = async (req, res) => {
   try {
+
     const logs = await OwnerLog.find();
 
     let stats = {};
@@ -78,7 +84,7 @@ exports.getLoginStats = async (req, res) => {
   }
 };
 
-/* ================= SEND OTP (EMAIL) ================= */
+/* ================= SEND OTP ================= */
 
 exports.sendOTP = async (req, res) => {
   try {
@@ -125,7 +131,8 @@ exports.registerCustomer = async (req, res) => {
       district,
       state,
       pincode,
-      password: hashedPassword
+      password: hashedPassword,
+      profileImage: ""   // ✅ added
     });
 
     await customer.save();
@@ -171,13 +178,53 @@ exports.loginCustomer = async (req, res) => {
 
     res.json({
       success: true,
-      customer
+      customer: {
+        _id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        mobile: customer.mobile,
+        address: customer.address,
+        profileImage: customer.profileImage   // ✅ added
+      }
     });
 
   } catch (err) {
     res.json({
       success: false,
       message: "Login error"
+    });
+  }
+};
+
+/* ================= SAVE PROFILE IMAGE ================= */
+
+exports.saveProfileImage = async (req, res) => {
+  try {
+
+    const { userId, image } = req.body;
+
+    const customer = await Customer.findById(userId);
+
+    if (!customer) {
+      return res.json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    customer.profileImage = image;
+    await customer.save();
+
+    res.json({
+      success: true,
+      message: "Image saved"
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.json({
+      success: false,
+      message: "Error saving image"
     });
   }
 };

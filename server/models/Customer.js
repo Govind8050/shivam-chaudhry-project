@@ -28,7 +28,11 @@ pincode:String,
 password:{
 type:String,
 required:true
-}
+},
+ profileImage: {
+        type: String,
+        default: ""
+    }
 
 })
 
