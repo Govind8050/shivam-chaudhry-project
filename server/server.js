@@ -134,3 +134,30 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server Running on http://localhost:${PORT}`);
 });
+
+
+const Razorpay = require("razorpay");
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// ✅ THIS ROUTE IS MISSING / WRONG
+app.post("/api/create-order", async (req, res) => {
+  try {
+
+    const { amount } = req.body;
+
+    const order = await razorpay.orders.create({
+      amount: amount * 100,
+      currency: "INR"
+    });
+
+    res.json(order);
+
+  } catch (err) {
+    console.log("RAZORPAY ERROR:", err);
+    res.status(500).json({ error: "Order failed" });
+  }
+});

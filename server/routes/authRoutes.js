@@ -15,5 +15,5 @@ router.post("/customer-login", authController.loginCustomer);
 
 // Image Added
 router.post("/save-profile-image", authController.saveProfileImage);
-
+router.post("/create-order", authController.createOrder);
 module.exports = router;

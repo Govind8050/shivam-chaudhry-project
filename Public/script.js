@@ -1186,16 +1186,30 @@ function zxCheckout() {
 
         <h3>Payment Method</h3>
 
-        <select class="zxInput">
-            <option>Cash on Delivery</option>
-            <option>Net Banking</option>
+        <select class="zxInput" id="paymentMethod" onchange="togglePayButton()">
+            <option value="cod">Cash on Delivery</option>
+            <option value="online">Net Banking</option>
         </select>
 
-        <button class="zxBtn buyBtn" onclick="zxPlaceOrder()">Place Order</button>
+        <button class="zxBtn buyBtn" id="placeOrderBtn" onclick="zxPlaceOrder()">Place Order</button>
+        <button class="zxBtn buyBtn" id="payNowBtn" style="display:none;" onclick="payNow()">💳 Pay Now</button>
         <button class="zxBtn backBtn" onclick="zxGoBack()">⬅ Back</button>
     `;
 }
+function togglePayButton(){
+    const method = document.getElementById("paymentMethod").value;
 
+    const placeBtn = document.getElementById("placeOrderBtn");
+    const payBtn = document.getElementById("payNowBtn");
+
+    if(method === "online"){
+        placeBtn.style.display = "none";
+        payBtn.style.display = "block";
+    }else{
+        placeBtn.style.display = "block";
+        payBtn.style.display = "none";
+    }
+}
 function zxGoBack(){
 
     const last = zxHistory.pop();
@@ -1446,3 +1460,52 @@ document.addEventListener("DOMContentLoaded", function(){
     loadProfileImage();
 
 });
+
+// razorpay Integration
+async function payNow(){
+
+    let total = 0;
+    zxCart.forEach(item => total += item.price * item.qty);
+
+    try{
+
+        const res = await fetch("/api/create-order", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ amount: total })
+        });
+
+        const data = await res.json();
+
+        const options = {
+            key: "rzp_test_SZrtnIsjkGoAmE", // ✅ FIXED
+            amount: data.amount,
+            currency: "INR",
+            name: "Anastik payment web",
+            description: "Order Payment",
+            order_id: data.id,
+
+            handler: function (response) {
+                alert("✅ Payment Successful!");
+                zxPlaceOrder();
+            },
+
+            prefill: {
+                name: "Customer",
+                email: "test@gmail.com",
+                contact: "9999999999"
+            },
+
+            theme: {
+                color: "#3399cc"
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+    }catch(err){
+        console.log(err);
+        alert("Payment failed");
+    }
+}
