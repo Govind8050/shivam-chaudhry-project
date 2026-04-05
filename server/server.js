@@ -35,11 +35,13 @@ mongoose.connection.once("open", async () => {
   console.log("🔥 DB READY");
 
   try {
-    const User = require("./models/OwnerLog");
+    // ✅ FIX: अब सही model use होगा
+    const User = require("./models/User");
 
     const test = await User.create({
       ownerId: "TEST",
-      date: "TEST"
+      date: "TEST",
+      profileImage: ""
     });
 
     console.log("✅ TEST SAVE SUCCESS:", test);
@@ -48,6 +50,7 @@ mongoose.connection.once("open", async () => {
     console.log("❌ TEST SAVE ERROR:", err);
   }
 });
+
 /* ================= API ROUTES ================= */
 
 app.use("/api/auth", authRoutes);

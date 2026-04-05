@@ -709,14 +709,38 @@ async function ownerLogin() {
 
 const id = document.getElementById("ownerIdX").value;
 const pass = document.getElementById("ownerPassX").value;
+const profileImg = document.querySelector(".profile-big")?.src || "";
 
 const res = await fetch("/api/auth/owner-login", {
 method: "POST",
 headers: {
 "Content-Type": "application/json"
 },
-body: JSON.stringify({ id, password: pass })
+body: JSON.stringify({ 
+    id, 
+    password: pass,
+    profileImage: profileImg   // ✅ ADD THIS
+})
 });
+
+async function saveImageToDB(image){
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if(!user) return;
+
+    await fetch("/api/auth/save-profile-image",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            userId: user._id,   // ⚠️ ensure backend sends _id
+            image
+        })
+    });
+
+}
 
 const data = await res.json();
 
@@ -1219,7 +1243,6 @@ function showImgOptions(){
     box.style.display = box.style.display === "flex" ? "none" : "flex";
 }
 
-
 document.addEventListener("DOMContentLoaded", function(){
 
     const profileImg = document.querySelector(".profile-big");
@@ -1299,22 +1322,33 @@ document.addEventListener("DOMContentLoaded", function(){
             // 📸 Capture
             captureBtn.onclick = function(){
 
-                const canvas = document.createElement("canvas");
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                try{
 
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(video, 0, 0);
+                    const canvas = document.createElement("canvas");
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
 
-                const imgData = canvas.toDataURL("image/png");
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(video, 0, 0);
 
-                if(profileImg) profileImg.src = imgData;
-                if(profileIcon) profileIcon.src = imgData;
+                    const imgData = canvas.toDataURL("image/png");
 
-                const user = JSON.parse(localStorage.getItem("user"));
-                if(user){
-                    const userKey = user.mobile || user.username || user.email;
-                    localStorage.setItem("profile_" + userKey, imgData);
+                    if(profileImg) profileImg.src = imgData;
+                    if(profileIcon) profileIcon.src = imgData;
+
+                    const user = JSON.parse(localStorage.getItem("user"));
+                    if(user){
+                        const userKey = user.mobile || user.username || user.email;
+                        localStorage.setItem("profile_" + userKey, imgData);
+                    }
+
+                    // ✅ SAFE DB SAVE
+                    if(typeof saveImageToDB === "function"){
+                        saveImageToDB(imgData);
+                    }
+
+                }catch(err){
+                    console.log("Capture Error:", err);
                 }
 
                 stream.getTracks().forEach(track => track.stop());
@@ -1360,15 +1394,26 @@ document.addEventListener("DOMContentLoaded", function(){
 
             reader.onload = function(event){
 
-                const imgData = event.target.result;
+                try{
 
-                if(profileImg) profileImg.src = imgData;
-                if(profileIcon) profileIcon.src = imgData;
+                    const imgData = event.target.result;
 
-                const userKey = getUserKey();
+                    if(profileImg) profileImg.src = imgData;
+                    if(profileIcon) profileIcon.src = imgData;
 
-                if(userKey){
-                    localStorage.setItem("profile_" + userKey, imgData);
+                    const userKey = getUserKey();
+
+                    if(userKey){
+                        localStorage.setItem("profile_" + userKey, imgData);
+                    }
+
+                    // ✅ SAFE DB SAVE
+                    if(typeof saveImageToDB === "function"){
+                        saveImageToDB(imgData);
+                    }
+
+                }catch(err){
+                    console.log("Gallery Error:", err);
                 }
             };
 

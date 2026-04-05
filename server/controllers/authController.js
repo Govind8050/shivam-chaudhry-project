@@ -1,4 +1,4 @@
-const OwnerLog = require("../models/OwnerLog");
+const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const Customer = require("../models/Customer");
 const nodemailer = require("nodemailer");
@@ -26,11 +26,17 @@ exports.ownerLogin = async (req, res) => {
 
       const today = new Date().toLocaleDateString();
 
+      let newLog;
+
       try {
-        await OwnerLog.create({
+        newLog = await User.create({
           ownerId: id,
-          date: today
+          date: today,
+          profileImage: req.body.profileImage || ""
         });
+
+        console.log("Saved to DB:", newLog);
+
       } catch (dbErr) {
         console.log("DB ERROR:", dbErr);
       }
@@ -39,10 +45,10 @@ exports.ownerLogin = async (req, res) => {
         success: true,
         message: "Login success",
         user: {
-          _id: "owner123",
+          _id: newLog?._id,   // ✅ REAL ID
           name: "Owner",
           email: "owner@gmail.com",
-          profileImage: ""   // ✅ added
+          profileImage: newLog?.profileImage || ""
         }
       });
     }
@@ -66,7 +72,7 @@ exports.ownerLogin = async (req, res) => {
 exports.getLoginStats = async (req, res) => {
   try {
 
-    const logs = await OwnerLog.find();
+    const logs = await User.find();
 
     let stats = {};
 
@@ -132,7 +138,7 @@ exports.registerCustomer = async (req, res) => {
       state,
       pincode,
       password: hashedPassword,
-      profileImage: ""   // ✅ added
+      profileImage: ""
     });
 
     await customer.save();
@@ -184,7 +190,7 @@ exports.loginCustomer = async (req, res) => {
         email: customer.email,
         mobile: customer.mobile,
         address: customer.address,
-        profileImage: customer.profileImage   // ✅ added
+        profileImage: customer.profileImage
       }
     });
 
@@ -203,6 +209,20 @@ exports.saveProfileImage = async (req, res) => {
 
     const { userId, image } = req.body;
 
+    // 🔥 पहले User में check करो (owner/employee)
+    let user = await User.findById(userId);
+
+    if (user) {
+      user.profileImage = image;
+      await user.save();
+
+      return res.json({
+        success: true,
+        message: "Image saved (User)"
+      });
+    }
+
+    // 🔥 अगर User में नहीं मिला → Customer में check करो
     const customer = await Customer.findById(userId);
 
     if (!customer) {
@@ -217,7 +237,7 @@ exports.saveProfileImage = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Image saved"
+      message: "Image saved (Customer)"
     });
 
   } catch (err) {
