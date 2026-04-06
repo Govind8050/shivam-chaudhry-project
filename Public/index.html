@@ -23,6 +23,11 @@
         <a class="login-btn" href="#" onclick="showSection('about')">About</a>
         <a class="login-btn" href="#" onclick="showSection('order')">Order</a>
         <a class="login-btn" href="#" onclick="showSection('address')">Address</a>
+        <!-- Notification Panel -->
+<!-- 🔔 NOTIFICATION ICON -->
+        <div id="notificationIcon" onclick="toggleNotifications()">
+            🔔 <span id="notifCount">0</span>
+        </div>
 
         <div class="dropdown">
             <button id="loginBtn" class="login-btn">Login</button>
@@ -429,7 +434,18 @@ Login
 
 </div>
  <!-- Customer Login close -->
+<!-- Notification Counter -->
+ <!-- 🔥 NOTIFICATION PANEL -->
+<div id="notificationPanel" class="notif-panel">
 
+    <div class="notif-header">
+        <h2>📦 Orders</h2>
+        <span class="closeNotif" onclick="toggleNotifications()">✖</span>
+    </div>
+
+    <div id="notifList"></div>
+
+</div>
  
 <footer class="footer">
     <p>© 2026 Anastik Manufacturing Pvt Ltd. All Rights Reserved.</p>

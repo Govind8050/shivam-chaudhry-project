@@ -415,22 +415,47 @@ function showProfile(user){
 
 function updateNavbar(){
 
-const user = JSON.parse(localStorage.getItem("user"));
+    const user = JSON.parse(localStorage.getItem("user"));
+    const isOwner = localStorage.getItem("owner");
 
-if(user){
+    const notifIcon = document.getElementById("notificationIcon");
 
-document.getElementById("loginBtn").style.display="none";
+    if(user){
 
-document.getElementById("profileArea").style.display="inline-block";
+        document.getElementById("loginBtn").style.display="none";
+        document.getElementById("profileArea").style.display="inline-block";
 
-/* SAFE DATA SHOW */
-document.getElementById("pName").innerText = user.name || "";
-document.getElementById("pEmail").innerText = user.email || "";
-document.getElementById("pUsername").innerText = user.username || "";
-document.getElementById("pAddress").innerText = user.address || "";
+        // 🔥 ONLY OWNER → SHOW NOTIFICATION
+       if(user){
 
+    document.getElementById("loginBtn").style.display="none";
+    document.getElementById("profileArea").style.display="inline-block";
+
+    if(isOwner === "true"){
+        notifIcon.style.display = "inline-block";
+    } else {
+        notifIcon.style.display = "none";
+    }
+
+} else {
+    document.getElementById("loginBtn").style.display="inline-block";
+    document.getElementById("profileArea").style.display="none";
+    notifIcon.style.display = "none";
 }
 
+        /* SAFE DATA SHOW */
+        document.getElementById("pName").innerText = user.name || "";
+        document.getElementById("pEmail").innerText = user.email || "";
+        document.getElementById("pUsername").innerText = user.username || "";
+        document.getElementById("pAddress").innerText = user.address || "";
+
+    } else {
+
+        // ❗ LOGOUT CASE
+        document.getElementById("loginBtn").style.display="inline-block";
+        document.getElementById("profileArea").style.display="none";
+        notifIcon.style.display = "none"; // 🔥 hide notification
+    }
 }
 
 function toggleProfile(){
@@ -444,6 +469,7 @@ document.getElementById("profileOverlay").classList.add("active");
 function logoutUser(){
 
 localStorage.removeItem("user");
+localStorage.removeItem("owner"); 
 
 location.reload();
 
@@ -463,6 +489,8 @@ updateNavbar();
 // Customer Login Form
 function openCustomerLogin(){
     document.getElementById("customerLoginForm").style.display="flex";
+
+    
 }
 function closeCustomerLogin(){
 
@@ -568,6 +596,7 @@ if(data.success){
 
 alert("Customer Login Successful")
 
+ localStorage.removeItem("owner");
 /* ✅ CORRECT SAVE */
 localStorage.setItem("user",JSON.stringify({
 name: data.customer.name,
@@ -839,6 +868,7 @@ window.onload = function () {
 window.addEventListener("load", function(){
 
 updateNavbar();
+updateNotificationCount();
 
 // OWNER POPUP HIDE
 const owner = document.getElementById("ownerLoginOverlayX");
@@ -848,6 +878,60 @@ if(owner) owner.style.display = "none";
 if(forgot) forgot.style.display = "none";
 
 });
+
+function toggleNotifications(){
+    const panel = document.getElementById("notificationPanel");
+    panel.classList.toggle("active");
+    loadNotifications();
+}
+
+function toggleOrder(card){
+
+    document.querySelectorAll(".order-card").forEach(c => {
+        if(c !== card) c.classList.remove("active");
+    });
+
+    card.classList.toggle("active");
+}
+
+function loadNotifications(){
+
+    const list = document.getElementById("notifList");
+    let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+    list.innerHTML = "";
+
+    if(orders.length === 0){
+        list.innerHTML = "<p>No Orders</p>";
+        return;
+    }
+
+    orders.reverse().forEach(order => {
+
+        let itemsHTML = order.items.map(item =>
+            `${item.name} × ${item.qty}`
+        ).join("<br>");
+
+        list.innerHTML += `
+        <div class="order-card" onclick="toggleOrder(this)">
+
+            <div class="order-summary">
+                <b>${order.user?.name || "Customer"}</b>
+                <span>🛒 ${order.items.length} items</span>
+            </div>
+
+            <div class="order-details">
+                <p><b>📞 Phone:</b> ${order.user?.mobile || "N/A"}</p>
+                <p><b>📍 Address:</b> ${order.user?.address || "N/A"}</p>
+                <p><b>💳 Payment:</b> ${order.payment || "COD"}</p>
+                <p><b>📦 Items:</b><br>${itemsHTML}</p>
+                <p><b>🕒 Date:</b> ${order.date}</p>
+            </div>
+
+        </div>
+        `;
+    });
+}
 
 
 // All Order Section
@@ -1242,11 +1326,42 @@ function zxGoBack(){
 }
 
 /* ================= PLACE ORDER ================= */
-function zxPlaceOrder() {
-    alert("🎉 Order Placed Successfully!");
+function zxPlaceOrder(){
+
+    const paymentMethod = document.getElementById("paymentMethod")?.value || "COD";
+
+    const order = {
+        items: zxCart,
+        date: new Date().toLocaleString(),
+        payment: paymentMethod,
+        user: JSON.parse(localStorage.getItem("user")),
+        address: document.querySelector(".zxInput")?.value || "Not Provided"
+    };
+
+    let orders = JSON.parse(localStorage.getItem("orders")) || [];
+    orders.push(order);
+
+    localStorage.setItem("orders", JSON.stringify(orders));
+
+    alert("🎉 Order Placed!");
+
     zxCart = [];
-    location.reload();
+
+    updateNotificationCount();
 }
+
+// NOtification
+function updateNotificationCount(){
+
+    let orders = JSON.parse(localStorage.getItem("orders")) || [];
+
+    const countEl = document.getElementById("notifCount");
+
+    if(countEl){
+        countEl.innerText = orders.length;
+    }
+}
+
 function showImgOptions(){
 
     const box = document.getElementById("imgOptions");
