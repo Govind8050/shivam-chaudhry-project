@@ -1325,6 +1325,25 @@ function zxGoBack(){
     }
 }
 
+// Green Successful Popup After order 
+function showSuccessPopup(){
+    document.getElementById("successPopup").style.display = "flex";
+}
+
+function closeSuccessPopup(){
+    document.getElementById("successPopup").style.display = "none";
+
+    // 🔥 RESET UI AFTER CLOSE
+    zxHistory = [];
+
+    document.getElementById("zxProductList").style.display = "grid";
+    document.getElementById("zxDetailView").style.display = "none";
+    document.getElementById("zxCartView").style.display = "none";
+    document.getElementById("zxCheckoutView").style.display = "none";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 /* ================= PLACE ORDER ================= */
 function zxPlaceOrder(){
 
@@ -1343,11 +1362,12 @@ function zxPlaceOrder(){
 
     localStorage.setItem("orders", JSON.stringify(orders));
 
-    alert("🎉 Order Placed!");
-
     zxCart = [];
 
     updateNotificationCount();
+
+    // 🔥 SHOW BEAUTIFUL POPUP
+    showSuccessPopup();
 }
 
 // NOtification
