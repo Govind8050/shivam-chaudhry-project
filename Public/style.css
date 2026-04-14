@@ -2324,3 +2324,103 @@ select.zxInput{
     border-radius: 8px;
     cursor: pointer;
 }
+
+
+
+/* 🔥 Notification Card */
+.notif-card{
+    background: linear-gradient(135deg, #1e1e2f, #2a2a40);
+    margin: 12px;
+    padding: 15px 18px;
+    border-radius: 15px;
+    cursor: pointer;
+    color: #fff;
+
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 🔥 Hover Effect */
+.notif-card:hover{
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.6);
+}
+
+/* 🔥 Glow Border Effect */
+.notif-card::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 15px;
+    padding: 1px;
+    background: linear-gradient(45deg, #00d9ff, #ff00c8, #00ff88);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+}
+
+/* 🔥 Title Row */
+.notif-title{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 🔥 Title Text */
+.notif-title b{
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+/* 🔥 Date */
+.notif-title span{
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* 🔥 Message Box */
+.notif-detail{
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 10px;
+
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(6px);
+
+    font-size: 14px;
+    line-height: 1.5;
+    color: #e0e0e0;
+
+    animation: fadeSlide 0.3s ease;
+}
+
+/* 🔥 Animation */
+@keyframes fadeSlide{
+    from{
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to{
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 🔥 Scroll Smooth (optional) */
+#notificationPanel{
+    max-height: 700px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* 🔥 Custom Scrollbar */
+#notificationPanel::-webkit-scrollbar{
+    width: 6px;
+}
+
+#notificationPanel::-webkit-scrollbar-thumb{
+    background: #00d9ff;
+    border-radius: 10px;
+}

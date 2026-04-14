@@ -25,7 +25,7 @@
         <a class="login-btn" href="#" onclick="showSection('address')">Address</a>
         <!-- Notification Panel -->
 <!-- 🔔 NOTIFICATION ICON -->
-        <div id="notificationIcon" onclick="toggleNotifications()">
+        <div id="notificationIcon" style="display: none;" onclick="toggleNotifications()">
             🔔 <span id="notifCount">0</span>
         </div>
 
@@ -434,8 +434,9 @@ Login
 
 </div>
  <!-- Customer Login close -->
-<!-- Notification Counter -->
+
  <!-- 🔥 NOTIFICATION PANEL -->
+
 <div id="notificationPanel" class="notif-panel">
 
     <div class="notif-header">
@@ -446,6 +447,7 @@ Login
     <div id="notifList"></div>
 
 </div>
+
 <!-- Succes Green Receipt -->
 <div id="successPopup" class="success-popup">
     <div class="popup-box">
@@ -463,6 +465,7 @@ Login
 <script src="script.js"></script>
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="Order.js"></script>
+<script src="Notification.js"></script>
 </body>
 </html>
 

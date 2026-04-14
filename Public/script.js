@@ -426,18 +426,16 @@ function updateNavbar(){
         document.getElementById("profileArea").style.display="inline-block";
 
         // 🔥 ONLY OWNER → SHOW NOTIFICATION
-       if(user){
+     if(user){
 
     document.getElementById("loginBtn").style.display="none";
     document.getElementById("profileArea").style.display="inline-block";
 
-    if(isOwner === "true"){
-        notifIcon.style.display = "inline-block";
-    } else {
-        notifIcon.style.display = "none";
-    }
+    // 🔥 ANY LOGIN (customer / employee / owner)
+    notifIcon.style.display = "inline-block";
 
 } else {
+
     document.getElementById("loginBtn").style.display="inline-block";
     document.getElementById("profileArea").style.display="none";
     notifIcon.style.display = "none";
@@ -897,40 +895,49 @@ function toggleOrder(card){
 function loadNotifications(){
 
     const list = document.getElementById("notifList");
-    let orders = JSON.parse(localStorage.getItem("orders")) || [];
 
     list.innerHTML = "";
 
-    if(orders.length === 0){
-        list.innerHTML = "<p>No Orders</p>";
+    if(!customNotifications || customNotifications.length === 0){
+        list.innerHTML = "<p>No Notifications</p>";
         return;
     }
 
-    orders.reverse().forEach(order => {
-
-        let itemsHTML = order.items.map(item =>
-            `${item.name} × ${item.qty}`
-        ).join("<br>");
+    customNotifications.forEach((notif, index) => {
 
         list.innerHTML += `
-        <div class="order-card" onclick="toggleOrder(this)">
+        <div class="notif-card" onclick="toggleNotifDetail(${index})">
 
-            <div class="order-summary">
-                <b>${order.user?.name || "Customer"}</b>
-                <span>🛒 ${order.items.length} items</span>
+            <div class="notif-title">
+                <b>${notif.title}</b>
+                <span>${notif.date}</span>
             </div>
 
-            <div class="order-details">
-                <p><b>📞 Phone:</b> ${order.user?.mobile || "N/A"}</p>
-                <p><b>📍 Address:</b> ${order.user?.address || "N/A"}</p>
-                <p><b>💳 Payment:</b> ${order.payment || "COD"}</p>
-                <p><b>📦 Items:</b><br>${itemsHTML}</p>
-                <p><b>🕒 Date:</b> ${order.date}</p>
+            <div class="notif-detail" id="notif-${index}" style="display:none;">
+                <p>${notif.message}</p>
             </div>
 
         </div>
         `;
     });
+}
+
+function toggleNotifDetail(index){
+
+    const allDetails = document.querySelectorAll(".notif-detail");
+
+    allDetails.forEach(el => {
+        if(el.id !== "notif-" + index){
+            el.style.display = "none";
+        }
+    });
+
+    const target = document.getElementById("notif-" + index);
+
+    if(target){
+        target.style.display =
+            target.style.display === "block" ? "none" : "block";
+    }
 }
 
 
@@ -1373,12 +1380,12 @@ function zxPlaceOrder(){
 // NOtification
 function updateNotificationCount(){
 
-    let orders = JSON.parse(localStorage.getItem("orders")) || [];
-
     const countEl = document.getElementById("notifCount");
 
+    // ✅ FIX: customNotifications ka length use karo
     if(countEl){
-        countEl.innerText = orders.length;
+        const count = (customNotifications && customNotifications.length) || 0;
+        countEl.innerText = count;
     }
 }
 
