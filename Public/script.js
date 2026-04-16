@@ -416,32 +416,22 @@ function showProfile(user){
 function updateNavbar(){
 
     const user = JSON.parse(localStorage.getItem("user"));
-    const isOwner = localStorage.getItem("owner");
-
     const notifIcon = document.getElementById("notificationIcon");
+    const menuBtn = document.getElementById("menuBtn"); // ✅ MENU BUTTON
 
     if(user){
 
-        document.getElementById("loginBtn").style.display="none";
-        document.getElementById("profileArea").style.display="inline-block";
+        // ✅ LOGIN STATE
+        document.getElementById("loginBtn").style.display = "none";
+        document.getElementById("profileArea").style.display = "inline-block";
 
-        // 🔥 ONLY OWNER → SHOW NOTIFICATION
-     if(user){
+        // ✅ SHOW NOTIFICATION
+        if(notifIcon) notifIcon.style.display = "inline-block";
 
-    document.getElementById("loginBtn").style.display="none";
-    document.getElementById("profileArea").style.display="inline-block";
+        // ✅ SHOW MENU BUTTON
+        if(menuBtn) menuBtn.style.display = "block";
 
-    // 🔥 ANY LOGIN (customer / employee / owner)
-    notifIcon.style.display = "inline-block";
-
-} else {
-
-    document.getElementById("loginBtn").style.display="inline-block";
-    document.getElementById("profileArea").style.display="none";
-    notifIcon.style.display = "none";
-}
-
-        /* SAFE DATA SHOW */
+        // ✅ USER DATA
         document.getElementById("pName").innerText = user.name || "";
         document.getElementById("pEmail").innerText = user.email || "";
         document.getElementById("pUsername").innerText = user.username || "";
@@ -449,10 +439,15 @@ function updateNavbar(){
 
     } else {
 
-        // ❗ LOGOUT CASE
-        document.getElementById("loginBtn").style.display="inline-block";
-        document.getElementById("profileArea").style.display="none";
-        notifIcon.style.display = "none"; // 🔥 hide notification
+        // ❌ LOGOUT STATE
+        document.getElementById("loginBtn").style.display = "inline-block";
+        document.getElementById("profileArea").style.display = "none";
+
+        // ❌ HIDE NOTIFICATION
+        if(notifIcon) notifIcon.style.display = "none";
+
+        // ❌ HIDE MENU BUTTON
+        if(menuBtn) menuBtn.style.display = "none";
     }
 }
 
@@ -1364,19 +1359,22 @@ function zxPlaceOrder(){
         address: document.querySelector(".zxInput")?.value || "Not Provided"
     };
 
-    let orders = JSON.parse(localStorage.getItem("orders")) || [];
-    orders.push(order);
+    const userKey = getUserKey();
+    let allOrders = JSON.parse(localStorage.getItem("allOrders")) || {};
 
-    localStorage.setItem("orders", JSON.stringify(orders));
+    if(!allOrders[userKey]){
+        allOrders[userKey] = [];
+    }
+
+    allOrders[userKey].push(order);
+
+    localStorage.setItem("allOrders", JSON.stringify(allOrders));
 
     zxCart = [];
 
+    showSuccessPopup(); // 👈 add this back
     updateNotificationCount();
-
-    // 🔥 SHOW BEAUTIFUL POPUP
-    showSuccessPopup();
 }
-
 // NOtification
 function updateNotificationCount(){
 
@@ -1534,8 +1532,8 @@ document.addEventListener("DOMContentLoaded", function(){
     ========================= */
     function getUserKey(){
         const user = JSON.parse(localStorage.getItem("user"));
-        if(!user) return null;
-        return user.mobile || user.username || user.email;
+        if(!user) return "guest";
+        return user.mobile || user.email;
     }
 
     /* =========================
@@ -1651,3 +1649,205 @@ async function payNow(){
         alert("Payment failed");
     }
 }
+
+
+// Menu Content Updated 
+function toggleSidebar(){
+    document.getElementById("sidebar").classList.toggle("active");
+
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if(user){
+        document.getElementById("sideName").innerText = user.name;
+        document.getElementById("sideEmail").innerText = user.email;
+    }
+}
+
+function getUserKey(){
+    const user = JSON.parse(localStorage.getItem("user"));
+    if(!user) return "guest";   // 🔥 important
+    return user.mobile || user.email;
+}
+
+
+function loadMyOrders(){
+
+    const userKey = getUserKey();
+    const allOrders = JSON.parse(localStorage.getItem("allOrders")) || {};
+    const orders = allOrders[userKey] || [];
+
+    const box = document.getElementById("myOrdersList");
+
+    if(orders.length === 0){
+        box.innerHTML = "<p>No Orders Found</p>";
+        return;
+    }
+
+    box.innerHTML = "";
+
+    orders.forEach((order,index)=>{
+
+        let total = 0;
+        order.items.forEach(i => total += i.price * i.qty);
+
+        // 👇 First product image (important)
+        const firstItem = order.items[0];
+        const img = firstItem.img || "https://via.placeholder.com/80";
+
+        // 👇 Expected Delivery
+        const orderDate = new Date(order.date);
+        const deliveryDate = new Date(orderDate);
+        deliveryDate.setDate(orderDate.getDate() + 5);
+
+        const deliveryText = deliveryDate.toDateString();
+
+        box.innerHTML += `
+        <div class="order-row" onclick="openOrderDetail(${index})">
+
+            <img src="${img}" class="order-img">
+
+            <div class="order-info">
+                <h3>Order #${index+1}</h3>
+                <p>₹${total} • ${order.items.length} items</p>
+                <span class="delivery">Delivery by: ${deliveryText}</span>
+            </div>
+
+            <div class="order-status">📦 Placed</div>
+            
+        </div>
+        
+        `;
+        
+    });
+}
+
+function showTracking(index){
+
+    const userKey = getUserKey();
+    const allOrders = JSON.parse(localStorage.getItem("allOrders")) || {};
+    const order = allOrders[userKey][index];
+
+    const days = Math.floor((Date.now() - new Date(order.date)) / (1000*60*60*24));
+
+    let status = "Order Placed";
+
+    if(days >= 1) status = "Dispatched 🚚";
+    if(days >= 3) status = "Out for Delivery 🚴";
+    if(days >= 5) status = "Delivered ✅";
+
+    alert(`Tracking Status:\n${status}`);
+} 
+
+function saveAddress(address){
+
+    const userKey = getUserKey();
+
+    localStorage.setItem("address_"+userKey, address);
+}
+
+function loadAddress(){
+
+    const userKey = getUserKey();
+    const address = localStorage.getItem("address_"+userKey);
+
+    document.getElementById("savedAddress").innerText = address || "No Address";
+}
+function savePayment(card){
+
+    const userKey = getUserKey();
+
+    localStorage.setItem("card_"+userKey, card);
+}
+
+function openSection(type){
+
+    // 🔥 sidebar close
+    document.getElementById("sidebar").classList.remove("active");
+
+    // 🔥 sab hide
+    document.getElementById("home-wrapper").style.display = "none";
+    document.getElementById("about-page").style.display = "none";
+    document.getElementById("order").style.display = "none";
+    document.getElementById("address").style.display = "none";
+    document.getElementById("ordersSection").style.display = "none";
+
+    // ✅ show only orders
+    if(type === "orders"){
+        document.getElementById("ordersSection").style.display = "block";
+        loadMyOrders();
+    }
+
+    if(type === "profile"){
+        toggleProfile();
+    }
+}
+function openOrderDetail(index){
+
+    const userKey = getUserKey();
+    const allOrders = JSON.parse(localStorage.getItem("allOrders")) || {};
+    const order = allOrders[userKey][index];
+
+    const box = document.getElementById("myOrdersList");
+
+    let itemsHTML = "";
+
+    order.items.forEach(i=>{
+        itemsHTML += `
+        <p>${i.name} × ${i.qty} = ₹${i.price * i.qty}</p>
+        `;
+    });
+
+    // 🔥 TRACKING LOGIC
+    const days = Math.floor((Date.now() - new Date(order.date)) / (1000*60*60*24));
+
+    let status = "Order Placed";
+    let progress = 25;
+
+    if(days >= 1){
+        status = "Dispatched 🚚";
+        progress = 50;
+    }
+    if(days >= 3){
+        status = "Out for Delivery 🚴";
+        progress = 75;
+    }
+    if(days >= 5){
+        status = "Delivered ✅";
+        progress = 100;
+    }
+
+    box.innerHTML = `
+        <h2>📦 Order Details</h2>
+
+        ${itemsHTML}
+
+        <div class="tracker">
+
+            <div class="step ${progress>=25 ? 'active' : ''}">Placed</div>
+            <div class="step ${progress>=50 ? 'active' : ''}">Dispatched</div>
+            <div class="step ${progress>=75 ? 'active' : ''}">Out</div>
+            <div class="step ${progress>=100 ? 'active' : ''}">Delivered</div>
+
+            <div class="line">
+                <div class="line-progress" style="width:${progress}%"></div>
+            </div>
+
+        </div>
+
+        <p class="status-text">${status}</p>
+
+        <button id="LastOrder" onclick="loadMyOrders()">⬅ Back</button>
+        `;
+}
+// Closed Section For Inside My Order
+function closeOrders(){
+
+    // Orders section hide
+    document.getElementById("ordersSection").style.display = "none";
+
+    // Home show
+    document.getElementById("home-wrapper").style.display = "block";
+}
+// Closed Section For Inside My Order Closed
+
+// Menu Content Updated closed

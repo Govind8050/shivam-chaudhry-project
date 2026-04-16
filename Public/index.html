@@ -44,11 +44,35 @@
                 <img src="https://i.imgur.com/6VBx3io.png" class="profile-icon" onclick="toggleProfile();showImgOptions();">
             </div>
 
+        <!-- ☰ MENU BUTTON -->
+        <div id="menuBtn" onclick="toggleSidebar()">☰</div>
+
+        <!-- SIDEBAR -->
+        <div id="sidebar" class="sidebar">
+
+            <div class="sidebar-header">
+                <h3 id="sideName">User Name</h3>
+                <p id="sideEmail">email@gmail.com</p>
+            </div>
+
+            <ul>
+                <li onclick="openSection('profile')">👤 My Profile</li>
+                <li onclick="openSection('orders')">📦 My Orders</li>
+                <li onclick="openSection('address')">📍 Saved Address</li>
+                <li onclick="openSection('payment')">💳 Payment Methods</li>
+                <li onclick="logoutUser()">🚪 Logout</li>
+            </ul>
+
+        </div>
 
 
     </nav>
 </header>
-
+<section id="ordersSection" class="page-section" style="display:none;">
+    <h2>My Orders</h2>
+    <button class="close-orders" onclick="closeOrders()">❌</button>
+    <div id="myOrdersList"></div>
+</section>
 
 <!-- HERO SECTION -->
 <div id="home-wrapper">
