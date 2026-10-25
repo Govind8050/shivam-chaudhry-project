@@ -1,5 +1,5 @@
 const express = require("express");
-const mongoose = require("mongoose");
+const sequelize = require("./db");
 const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
@@ -20,35 +20,17 @@ app.use(express.static(path.join(__dirname, "../Public")));
 
 /* ================= DATABASE ================= */
 
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 5000
+sequelize.authenticate()
+.then(() => {
+  console.log("✅ MySQL Connected");
+  // tables apne aap ban jayengi (customers, users)
+  return sequelize.sync();
 })
 .then(() => {
-  console.log("✅ MongoDB Connected");
+  console.log("🔥 DB READY");
 })
 .catch(err => {
   console.log("❌ Database Error:", err);
-});
-
-/* 🔥 DB READY CHECK (VERY IMPORTANT) */
-mongoose.connection.once("open", async () => {
-  console.log("🔥 DB READY");
-
-  try {
-    // ✅ FIX: अब सही model use होगा
-    const User = require("./models/User");
-
-    const test = await User.create({
-      ownerId: "TEST",
-      date: "TEST",
-      profileImage: ""
-    });
-
-    console.log("✅ TEST SAVE SUCCESS:", test);
-
-  } catch (err) {
-    console.log("❌ TEST SAVE ERROR:", err);
-  }
 });
 
 /* ================= API ROUTES ================= */
@@ -102,7 +84,7 @@ app.get("/api/login-stats", async (req, res) => {
   try {
     const User = require("./models/User");
 
-    const logs = await User.find();
+    const logs = await User.findAll();
 
     let stats = {};
 

@@ -1,21 +1,19 @@
-// const mongoose = require("mongoose");
+const { DataTypes } = require("sequelize");
+const sequelize = require("../db");
 
-// const ownerLogSchema = new mongoose.Schema({
-//   ownerId: String,
-//   date: String,
-//   loginTime: {
-//     type: String,
-//     default: () => {
-//       return new Date().toLocaleString("en-IN", {
-//         timeZone: "Asia/Kolkata"
-//       });
-//     },
-//      profileImage: {
-//         type: String,
-//         default: ""
-//     }
+const OwnerLog = sequelize.define(
+  "OwnerLog",
+  {
+    ownerId: { type: DataTypes.STRING },
+    date: { type: DataTypes.STRING },
+    loginTime: {
+      type: DataTypes.STRING,
+      defaultValue: () =>
+        new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    },
+    profileImage: { type: DataTypes.TEXT("long") }
+  },
+  { tableName: "owner_logs", timestamps: false }
+);
 
-//   }
-// });
-
-// module.exports = mongoose.model("OwnerLog", ownerLogSchema);
+module.exports = OwnerLog;

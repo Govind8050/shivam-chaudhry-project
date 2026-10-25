@@ -45,7 +45,7 @@ exports.ownerLogin = async (req, res) => {
         success: true,
         message: "Login success",
         user: {
-          _id: newLog?._id,   // ✅ REAL ID
+          _id: newLog?.id,   // ✅ REAL ID (MySQL me id)
           name: "Owner",
           email: "owner@gmail.com",
           profileImage: newLog?.profileImage || ""
@@ -72,7 +72,7 @@ exports.ownerLogin = async (req, res) => {
 exports.getLoginStats = async (req, res) => {
   try {
 
-    const logs = await User.find();
+    const logs = await User.findAll();
 
     let stats = {};
 
@@ -129,7 +129,7 @@ exports.registerCustomer = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const customer = new Customer({
+    await Customer.create({
       name,
       email,
       mobile,
@@ -140,8 +140,6 @@ exports.registerCustomer = async (req, res) => {
       password: hashedPassword,
       profileImage: ""
     });
-
-    await customer.save();
 
     res.json({
       success: true,
@@ -164,7 +162,7 @@ exports.loginCustomer = async (req, res) => {
 
     const { email, password } = req.body;
 
-    const customer = await Customer.findOne({ email });
+    const customer = await Customer.findOne({ where: { email } });
 
     if (!customer) {
       return res.json({
@@ -185,7 +183,7 @@ exports.loginCustomer = async (req, res) => {
     res.json({
       success: true,
       customer: {
-        _id: customer._id,
+        _id: customer.id,
         name: customer.name,
         email: customer.email,
         mobile: customer.mobile,
@@ -210,7 +208,7 @@ exports.saveProfileImage = async (req, res) => {
     const { userId, image } = req.body;
 
     // 🔥 पहले User में check करो (owner/employee)
-    let user = await User.findById(userId);
+    let user = await User.findByPk(userId);
 
     if (user) {
       user.profileImage = image;
@@ -223,7 +221,7 @@ exports.saveProfileImage = async (req, res) => {
     }
 
     // 🔥 अगर User में नहीं मिला → Customer में check करो
-    const customer = await Customer.findById(userId);
+    const customer = await Customer.findByPk(userId);
 
     if (!customer) {
       return res.json({
