@@ -1,19 +1,18 @@
 const express = require("express");
 const router = express.Router();
+const c = require("../controllers/authController");
 
-/* SINGLE IMPORT */
-const authController = require("../controllers/authController");
+/* CUSTOMER */
+router.post("/customer-register", c.registerCustomer);
+router.post("/customer-login", c.loginCustomer);   // ek hi login: admin + customer
 
-/* OWNER ROUTES */
-router.post("/owner-login", authController.ownerLogin);
-router.get("/login-stats", authController.getLoginStats);
-router.post("/send-otp", authController.sendOTP);
+/* ORDERS (login zaroori) */
+router.post("/orders", c.requireUser, c.placeOrder);
+router.get("/my-orders", c.requireUser, c.getMyOrders);
 
-/* CUSTOMER ROUTES */
-router.post("/customer-register", authController.registerCustomer);
-router.post("/customer-login", authController.loginCustomer);
+/* ADMIN (admin token zaroori) */
+router.get("/admin/customers", c.requireAdmin, c.getAllCustomers);
+router.get("/admin/orders", c.requireAdmin, c.getAllOrders);
+router.get("/login-stats", c.requireAdmin, c.getLoginStats);
 
-// Image Added
-router.post("/save-profile-image", authController.saveProfileImage);
-router.post("/create-order", authController.createOrder);
 module.exports = router;

@@ -4,14 +4,28 @@ const cors = require("cors");
 const path = require("path");
 require("dotenv").config();
 const nodemailer = require("nodemailer");
+const Razorpay = require("razorpay");
 
 const authRoutes = require("./routes/authRoutes");
 
+require("./models/Customer");
+require("./models/Admin");
+require("./models/Order");
+const seedAdmin = require("./models/seedAdmin");
+
 const app = express();
+
+/* ================= STARTUP CHECK ================= */
+
+["JWT_SECRET", "ADMIN_EMAIL", "ADMIN_PASSWORD"].forEach(key => {
+  if (!process.env[key]) {
+    console.log(`⚠️ Missing environment variable: ${key}`);
+  }
+});
 
 /* ================= MIDDLEWARE ================= */
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 app.use(cors());
 
 /* ================= STATIC WEBSITE ================= */
@@ -21,17 +35,13 @@ app.use(express.static(path.join(__dirname, "../Public")));
 /* ================= DATABASE ================= */
 
 sequelize.authenticate()
-.then(() => {
-  console.log("✅ MySQL Connected");
-  // tables apne aap ban jayengi (customers, users)
-  return sequelize.sync();
-})
-.then(() => {
-  console.log("🔥 DB READY");
-})
-.catch(err => {
-  console.log("❌ Database Error:", err);
-});
+  .then(() => {
+    console.log("✅ MySQL Connected");
+    return sequelize.sync();      // admins, customers, orders tables ban jayengi
+  })
+  .then(() => seedAdmin())        // fixed admin row
+  .then(() => console.log("🔥 DB READY"))
+  .catch(err => console.log("❌ Database Error:", err));
 
 /* ================= API ROUTES ================= */
 
@@ -78,28 +88,31 @@ Customer wants to place a bulk order.
   }
 });
 
-/* ================= LOGIN STATS ================= */
+/* ================= RAZORPAY ================= */
 
-app.get("/api/login-stats", async (req, res) => {
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+app.post("/api/create-order", async (req, res) => {
   try {
-    const User = require("./models/User");
+    const { amount } = req.body;
 
-    const logs = await User.findAll();
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid amount" });
+    }
 
-    let stats = {};
-
-    logs.forEach(log => {
-      if (!stats[log.date]) {
-        stats[log.date] = 0;
-      }
-      stats[log.date]++;
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: "INR"
     });
 
-    res.json(stats);
+    res.json(order);
 
   } catch (err) {
-    console.log("❌ Stats Error:", err);
-    res.status(500).json({ message: "Error fetching stats" });
+    console.log("RAZORPAY ERROR:", err);
+    res.status(500).json({ error: "Order failed" });
   }
 });
 
@@ -115,31 +128,4 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server Running on http://localhost:${PORT}`);
-});
-
-
-const Razorpay = require("razorpay");
-
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
-
-// ✅ THIS ROUTE IS MISSING / WRONG
-app.post("/api/create-order", async (req, res) => {
-  try {
-
-    const { amount } = req.body;
-
-    const order = await razorpay.orders.create({
-      amount: amount * 100,
-      currency: "INR"
-    });
-
-    res.json(order);
-
-  } catch (err) {
-    console.log("RAZORPAY ERROR:", err);
-    res.status(500).json({ error: "Order failed" });
-  }
 });

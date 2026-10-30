@@ -1,274 +1,314 @@
-const User = require("../models/User");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const Customer = require("../models/Customer");
-const nodemailer = require("nodemailer");
+const Admin = require("../models/Admin");
+const Order = require("../models/Order");
+const User = require("../models/User");
 
-/* ================= OWNER CONFIG ================= */
+function isBcryptHash(str) {
+  return typeof str === "string" && /^\$2[aby]\$/.test(str);
+}
 
-const OWNER_ID = "2313020292";
-const OWNER_PASSWORD = "8050";
+function signToken(payload, expires) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: expires });
+}
 
-/* ================= OWNER LOGIN ================= */
-
-exports.ownerLogin = async (req, res) => {
-  try {
-
-    const { id, password } = req.body;
-
-    if (!id || !password) {
-      return res.json({
-        success: false,
-        message: "All fields required"
-      });
-    }
-
-    if (id === OWNER_ID && password === OWNER_PASSWORD) {
-
-      const today = new Date().toLocaleDateString();
-
-      let newLog;
-
-      try {
-        newLog = await User.create({
-          ownerId: id,
-          date: today,
-          profileImage: req.body.profileImage || ""
-        });
-
-        console.log("Saved to DB:", newLog);
-
-      } catch (dbErr) {
-        console.log("DB ERROR:", dbErr);
-      }
-
-      return res.json({
-        success: true,
-        message: "Login success",
-        user: {
-          _id: newLog?.id,   // ✅ REAL ID (MySQL me id)
-          name: "Owner",
-          email: "owner@gmail.com",
-          profileImage: newLog?.profileImage || ""
-        }
-      });
-    }
-
-    return res.json({
-      success: false,
-      message: "Invalid credentials"
-    });
-
-  } catch (err) {
-    console.log("SERVER ERROR:", err);
-    res.status(500).json({
-      success: false,
-      message: "Server error"
-    });
-  }
-};
-
-/* ================= LOGIN STATS ================= */
-
-exports.getLoginStats = async (req, res) => {
-  try {
-
-    const logs = await User.findAll();
-
-    let stats = {};
-
-    logs.forEach(log => {
-      if (!stats[log.date]) {
-        stats[log.date] = 0;
-      }
-      stats[log.date]++;
-    });
-
-    res.json(stats);
-
-  } catch (err) {
-    res.status(500).json({ message: "Error fetching stats" });
-  }
-};
-
-/* ================= SEND OTP ================= */
-
-exports.sendOTP = async (req, res) => {
-  try {
-
-    const otp = Math.floor(1000 + Math.random() * 9000);
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      }
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER,
-      subject: "Your Login OTP",
-      text: `Your OTP is: ${otp}`
-    });
-
-    res.json({ success: true, otp });
-
-  } catch (err) {
-    console.log("OTP Error:", err);
-    res.json({ success: false });
-  }
-};
-
-/* ================= CUSTOMER REGISTER ================= */
+/* ================= REGISTER (customers table) ================= */
 
 exports.registerCustomer = async (req, res) => {
   try {
-
     const { name, email, mobile, address, district, state, pincode, password } = req.body;
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (!name || !email || !mobile || !address || !district || !state || !pincode || !password) {
+      return res.status(400).json({ success: false, message: "Please fill all the fields" });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    if (String(password).length < 6) {
+      return res.status(400).json({ success: false, message: "Password must be at least 6 characters" });
+    }
+
+    // Admin ka email customer ke roop me register nahi ho sakta
+    const isAdminEmail = await Admin.findOne({ where: { email: cleanEmail } });
+    if (isAdminEmail) {
+      return res.status(400).json({ success: false, message: "This email cannot be registered" });
+    }
+
+    const exists = await Customer.findOne({ where: { email: cleanEmail } });
+    if (exists) {
+      return res.status(400).json({ success: false, message: "Email already registered" });
+    }
 
     await Customer.create({
-      name,
-      email,
-      mobile,
-      address,
-      district,
-      state,
-      pincode,
-      password: hashedPassword,
-      profileImage: ""
+      name: String(name).trim(),
+      email: cleanEmail,
+      mobile: String(mobile).trim(),
+      address: String(address).trim(),
+      district: String(district).trim(),
+      state: String(state).trim(),
+      pincode: String(pincode).trim(),
+      password: await bcrypt.hash(String(password), 10)
     });
 
-    res.json({
-      success: true,
-      message: "Customer Account Created"
-    });
+    res.json({ success: true, message: "Account created successfully. Please login." });
 
   } catch (err) {
-    console.log(err);
-    res.json({
-      success: false,
-      message: "Error creating account"
-    });
+    console.log("Register error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* ================= CUSTOMER LOGIN ================= */
+/* ================= EK HI LOGIN (admins table + customers table) ================= */
 
 exports.loginCustomer = async (req, res) => {
   try {
-
     const { email, password } = req.body;
 
-    const customer = await Customer.findOne({ where: { email } });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password required" });
+    }
+
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    /* 1) Pehle admins table me dekho */
+    const admin = await Admin.findOne({ where: { email: cleanEmail } });
+
+    if (admin) {
+      const ok = await bcrypt.compare(String(password), admin.password);
+
+      if (!ok) {
+        return res.status(401).json({ success: false, message: "Invalid email or password" });
+      }
+
+      return res.json({
+        success: true,
+        role: "admin",
+        token: signToken({ role: "admin", email: admin.email }, "8h"),
+        customer: { name: "Admin", email: admin.email, mobile: "", address: "" }
+      });
+    }
+
+    /* 2) Admin nahi hai to customers table */
+    const customer = await Customer.findOne({ where: { email: cleanEmail } });
 
     if (!customer) {
-      return res.json({
-        success: false,
-        message: "Customer not found"
-      });
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
     }
 
-    const isMatch = await bcrypt.compare(password, customer.password);
+    let ok = false;
 
-    if (!isMatch) {
-      return res.json({
-        success: false,
-        message: "Wrong password"
-      });
+    if (isBcryptHash(customer.password)) {
+      ok = await bcrypt.compare(String(password), customer.password);
+    } else {
+      // purane plain-text password wale customers
+      ok = String(password) === customer.password;
+      if (ok) {
+        customer.password = await bcrypt.hash(String(password), 10);
+        await customer.save();
+      }
     }
+
+    if (!ok) {
+      return res.status(401).json({ success: false, message: "Invalid email or password" });
+    }
+
+    User.create({ ownerId: customer.email }).catch(() => {});
 
     res.json({
       success: true,
+      role: "customer",
+      token: signToken({ role: "customer", id: customer.id, email: customer.email }, "7d"),
       customer: {
-        _id: customer.id,
         name: customer.name,
         email: customer.email,
         mobile: customer.mobile,
-        address: customer.address,
-        profileImage: customer.profileImage
+        address: customer.address
       }
     });
 
   } catch (err) {
-    res.json({
-      success: false,
-      message: "Login error"
-    });
+    console.log("Login error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
-/* ================= SAVE PROFILE IMAGE ================= */
+/* ================= TOKEN CHECK (middleware) ================= */
 
-exports.saveProfileImage = async (req, res) => {
+function readToken(req) {
+  const header = req.headers.authorization || "";
+  return header.startsWith("Bearer ") ? header.slice(7) : null;
+}
+
+// Koi bhi logged-in user (customer ya admin)
+exports.requireUser = (req, res, next) => {
   try {
+    const token = readToken(req);
+    if (!token) return res.status(401).json({ success: false, message: "Please login first" });
 
-    const { userId, image } = req.body;
-
-    // 🔥 पहले User में check करो (owner/employee)
-    let user = await User.findByPk(userId);
-
-    if (user) {
-      user.profileImage = image;
-      await user.save();
-
-      return res.json({
-        success: true,
-        message: "Image saved (User)"
-      });
-    }
-
-    // 🔥 अगर User में नहीं मिला → Customer में check करो
-    const customer = await Customer.findByPk(userId);
-
-    if (!customer) {
-      return res.json({
-        success: false,
-        message: "User not found"
-      });
-    }
-
-    customer.profileImage = image;
-    await customer.save();
-
-    res.json({
-      success: true,
-      message: "Image saved (Customer)"
-    });
-
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    next();
   } catch (err) {
-    console.log(err);
-    res.json({
-      success: false,
-      message: "Error saving image"
-    });
+    return res.status(401).json({ success: false, message: "Session expired. Please login again." });
   }
 };
 
-// Razorpay Integration
-const razorpay = require("../razorpay");
-
-/* ================= CREATE ORDER ================= */
-
-exports.createOrder = async (req, res) => {
+// Sirf admin
+exports.requireAdmin = (req, res, next) => {
   try {
+    const token = readToken(req);
+    if (!token) return res.status(401).json({ success: false, message: "Admin login required" });
 
-    const { amount } = req.body;
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    if (payload.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
 
-    const options = {
-      amount: amount * 100, // ₹ → paise
-      currency: "INR",
-      receipt: "order_" + Date.now()
-    };
+    req.admin = payload;
+    next();
+  } catch (err) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
+  }
+};
 
-    const order = await razorpay.orders.create(options);
+/* ================= ORDERS (orders table) ================= */
 
-    res.json(order);
+// Customer order place karta hai
+exports.placeOrder = async (req, res) => {
+  try {
+    if (req.user.role !== "customer") {
+      return res.status(403).json({ success: false, message: "Only customers can place orders" });
+    }
+
+    const { items, name, phone, address, paymentMethod, razorpay } = req.body;
+
+    if (!name || !phone || !address) {
+      return res.status(400).json({ success: false, message: "Name, phone and address are required" });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: "Cart is empty" });
+    }
+
+    // Sirf zaroori fields rakhte hain aur total server par nikalte hain
+    const cleanItems = items.map(i => ({
+      id: i.id,
+      name: String(i.name || ""),
+      price: Number(i.price) || 0,
+      qty: Math.max(1, parseInt(i.qty) || 1),
+      img: i.img || ""
+    }));
+
+    const total = cleanItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+
+    const method = paymentMethod === "online" ? "online" : "cod";
+    let paymentStatus = "pending";
+    let rzpOrderId = null;
+    let rzpPaymentId = null;
+
+    if (method === "online") {
+
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = razorpay || {};
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ success: false, message: "Payment details missing" });
+      }
+
+      const expected = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(razorpay_order_id + "|" + razorpay_payment_id)
+        .digest("hex");
+
+      if (expected !== razorpay_signature) {
+        return res.status(400).json({ success: false, message: "Payment verification failed" });
+      }
+
+      const dup = await Order.findOne({ where: { razorpayPaymentId: razorpay_payment_id } });
+      if (dup) {
+        return res.status(400).json({ success: false, message: "Order already recorded" });
+      }
+
+      paymentStatus = "paid";
+      rzpOrderId = razorpay_order_id;
+      rzpPaymentId = razorpay_payment_id;
+    }
+
+    const order = await Order.create({
+      customerId: req.user.id,
+      customerEmail: req.user.email,
+      customerName: String(name).trim(),
+      phone: String(phone).trim(),
+      address: String(address).trim(),
+      items: cleanItems,
+      totalAmount: total,
+      paymentMethod: method,
+      paymentStatus,
+      razorpayOrderId: rzpOrderId,
+      razorpayPaymentId: rzpPaymentId
+    });
+
+    res.json({ success: true, message: "Order placed", orderId: order.id });
 
   } catch (err) {
-    console.log("RAZORPAY ERROR:", err);
-    res.status(500).json({ message: "Order creation failed" });
+    console.log("Place order error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Customer apne orders dekhta hai
+exports.getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({
+      where: { customerEmail: req.user.email },
+      order: [["id", "DESC"]]
+    });
+
+    res.json({ success: true, orders });
+
+  } catch (err) {
+    console.log("My orders error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ================= ADMIN ================= */
+
+exports.getAllCustomers = async (req, res) => {
+  try {
+    const customers = await Customer.findAll({
+      attributes: ["id", "name", "email", "mobile", "address", "district", "state", "pincode"],
+      order: [["id", "DESC"]]
+    });
+
+    res.json({ success: true, customers });
+
+  } catch (err) {
+    console.log("Admin customers error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.findAll({ order: [["id", "DESC"]] });
+    res.json({ success: true, orders });
+
+  } catch (err) {
+    console.log("Admin orders error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.getLoginStats = async (req, res) => {
+  try {
+    const logs = await User.findAll();
+    const stats = {};
+    logs.forEach(log => { stats[log.date] = (stats[log.date] || 0) + 1; });
+    res.json(stats);
+
+  } catch (err) {
+    console.log("Stats error:", err);
+    res.status(500).json({ message: "Error fetching stats" });
   }
 };
