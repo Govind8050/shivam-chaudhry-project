@@ -31,58 +31,98 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ================= 01. THREE JS CANVAS ================= */
 
 // Hero section ka rotating 3D wireframe knot banata hai
+
 function initThreeCanvas() {
 
     const container = document.getElementById("canvas-container");
+
     if (!container || typeof THREE === "undefined") return;
 
+    // Container ki actual width and height
+    const getSize = () => ({
+        width: container.clientWidth,
+        height: container.clientHeight
+    });
+
+    const { width, height } = getSize();
+
+    if (width === 0 || height === 0) return;
+
+    // Scene
     const scene = new THREE.Scene();
 
+    // Camera
     const camera = new THREE.PerspectiveCamera(
-        85,
-        container.clientWidth / container.clientHeight,
+        65,
+        width / height,
         0.1,
         1000
     );
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    camera.position.z = 24;
 
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
     renderer.setClearColor(0x000000, 0);
 
+    container.innerHTML = "";
     container.appendChild(renderer.domElement);
 
-    const geometry = new THREE.TorusKnotGeometry(8, 2.5, 120, 16);
+    // 3D Torus Knot
+    const geometry = new THREE.TorusKnotGeometry(
+        8, 2.5, 120, 16
+    );
+
     const material = new THREE.MeshBasicMaterial({
         color: 0x00d9ff,
         wireframe: true
     });
 
     const knot = new THREE.Mesh(geometry, material);
+
     scene.add(knot);
 
-    camera.position.z = 19;
-
+    // Animation
     function animate() {
+
         requestAnimationFrame(animate);
+
         knot.rotation.x += 0.005;
         knot.rotation.y += 0.01;
+
         renderer.render(scene, camera);
     }
 
     animate();
 
-    // Screen size badalne par canvas ko bhi resize karta hai
-    window.addEventListener("resize", () => {
-        const w = container.clientWidth;
-        const h = container.clientHeight;
+    // Responsive resize
+    function resizeCanvas() {
 
-        renderer.setSize(w, h);
-        camera.aspect = w / h;
+        const newWidth = container.clientWidth;
+        const newHeight = container.clientHeight;
+
+        if (newWidth === 0 || newHeight === 0) return;
+
+        renderer.setSize(newWidth, newHeight);
+
+        camera.aspect = newWidth / newHeight;
         camera.updateProjectionMatrix();
-    });
+    }
 
+    window.addEventListener("resize", resizeCanvas);
+
+    // Container size changes ko bhi detect karega
+    const resizeObserver = new ResizeObserver(resizeCanvas);
+
+    resizeObserver.observe(container);
 }
+
 
 
 /* ================= 02. VIDEO CONTROLS ================= */
