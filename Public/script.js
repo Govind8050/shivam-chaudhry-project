@@ -2393,3 +2393,499 @@ function openSection(type) {
     openAccountPanel("profile");
 
 }
+
+
+/* =====================================================
+   ADMIN PANEL (Orders + delivery tracking update, Customers)
+   script.js ke bilkul END me paste karo.
+   Isme purane admin functions (openAdminPanel, closeAdminPanel, loadAdminCustomers,
+   updateAdminStats, filterAdminCustomers, renderAdminCustomers, loadAdminOrders,
+   renderAdminOrders) ke naye versions hain. Neeche paste karne se purane apne aap
+   replace ho jate hain (jo function sabse neeche likha ho wahi chalta hai).
+   Ye block script.js ke kisi aur helper par depend nahi karta, sirf logoutUser() chahiye.
+   ===================================================== */
+
+// Server ke addresses (orders ka route alag ho to sirf ye line badlo)
+const ADMIN_API_CUSTOMERS = "/api/auth/admin/customers";
+const ADMIN_API_ORDERS = "/api/auth/admin/orders";
+
+// Delivery tracking ke 4 steps (key wahi hai jo database me save hoti hai)
+const ADMIN_STATUS_LIST = [
+    { key: "placed",           short: "Placed",     label: "Order Placed",     icon: "📝" },
+    { key: "dispatched",       short: "Dispatched", label: "Dispatched",       icon: "🚚" },
+    { key: "out_for_delivery", short: "Out",        label: "Out for Delivery", icon: "🚴" },
+    { key: "delivered",        short: "Delivered",  label: "Delivered",        icon: "✅" }
+];
+
+// Admin panel ka data (customers, orders) aur abhi kaunsa tab khula hai
+const ADMIN_UI = { customers: [], orders: [], tab: "orders" };
+
+
+/* ---------- chhote helpers ---------- */
+
+// Admin login ke baad mila token
+function admToken() {
+    return localStorage.getItem("adminToken");
+}
+
+// Text ko HTML me safe banata hai (customer ke likhe naam/address page ko na tode)
+function admEsc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+}
+
+// 1500 -> ₹1,500
+function admMoney(n) {
+    return "₹" + Number(n || 0).toLocaleString("en-IN");
+}
+
+// Order ki date ko padhne layak banata hai
+function admDate(value) {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "";
+    return d.toLocaleString("en-IN", {
+        day: "2-digit", month: "short", year: "numeric",
+        hour: "2-digit", minute: "2-digit"
+    });
+}
+
+// Order ka status (khaali ya galat ho to "placed")
+function admStatusOf(order) {
+    const key = String(order && order.status || "placed");
+    return ADMIN_STATUS_LIST.some(s => s.key === key) ? key : "placed";
+}
+
+// Order ke items ko array me badalta hai (database se string ya array dono aa sakte hain)
+function admItems(order) {
+    let items = order && order.items;
+
+    if (typeof items === "string") {
+        try { items = JSON.parse(items); } catch (e) { items = []; }
+    }
+
+    return Array.isArray(items) ? items : [];
+}
+
+// Screen ke kone me chhota message dikhata hai (hara = safal, laal = error)
+function admToast(message, isError) {
+    const toast = document.createElement("div");
+    toast.className = "adm-toast" + (isError ? " error" : "");
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2600);
+}
+
+// Admin token ke saath server se baat karta hai. Token galat ho to dobara login karwata hai
+async function adminFetch(url, options = {}) {
+
+    const token = admToken();
+
+    if (!token) {
+        alert("Admin session not found. Please login again.");
+        logoutUser();
+        return null;
+    }
+
+    const res = await fetch(url, {
+        ...options,
+        headers: { ...(options.headers || {}), Authorization: "Bearer " + token }
+    });
+
+    if (res.status === 401 || res.status === 403) {
+        alert("Admin session expired. Please login again.");
+        logoutUser();
+        return null;
+    }
+
+    return res;
+}
+
+
+/* ---------- panel kholna / band karna ---------- */
+
+// Admin Panel kholta hai (sirf admin ke liye) aur customers + orders DB se mangwata hai
+function openAdminPanel() {
+
+    if (localStorage.getItem("owner") !== "true" || !admToken()) {
+        alert("Admin login required");
+        return;
+    }
+
+    if (typeof closeAccountPanel === "function") closeAccountPanel();
+
+    ["home-wrapper", "about-page", "address", "order", "ordersSection", "adminPanel"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = "none";
+    });
+
+    document.getElementById("adminPanel").style.display = "block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    adminTab(ADMIN_UI.tab);
+    refreshAdminPanel();
+}
+
+// "Back to Website": Admin Panel band karke Home page dikhata hai
+function closeAdminPanel() {
+
+    const panel = document.getElementById("adminPanel");
+    const home = document.getElementById("home-wrapper");
+
+    if (panel) panel.style.display = "none";
+    if (home) home.style.display = "block";
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// "Refresh" button: customers aur orders dono dobara laata hai
+function refreshAdminPanel() {
+    return Promise.all([loadAdminCustomers(), loadAdminOrders()]);
+}
+
+// Orders aur Customers tab ke beech badalta hai
+function adminTab(name) {
+
+    ADMIN_UI.tab = name === "customers" ? "customers" : "orders";
+
+    const showOrders = ADMIN_UI.tab === "orders";
+
+    document.getElementById("adminTabOrders").style.display = showOrders ? "block" : "none";
+    document.getElementById("adminTabCustomers").style.display = showOrders ? "none" : "block";
+
+    document.getElementById("adminTabBtnOrders").classList.toggle("active", showOrders);
+    document.getElementById("adminTabBtnCustomers").classList.toggle("active", !showOrders);
+}
+
+
+/* ---------- upar ke stats ---------- */
+
+// 5 stat cards: customers, states, orders, in progress, total sales, aur sabse naya customer
+function updateAdminStats() {
+
+    const customers = ADMIN_UI.customers;
+    const orders = ADMIN_UI.orders;
+
+    const states = new Set(
+        customers.map(c => String(c.state || "").trim().toLowerCase()).filter(Boolean)
+    );
+
+    const inProgress = orders.filter(o => admStatusOf(o) !== "delivered").length;
+    const sales = orders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
+
+    document.getElementById("adminTotalCustomers").innerText = customers.length;
+    document.getElementById("adminTotalStates").innerText = states.size;
+    document.getElementById("adminTotalOrders").innerText = orders.length;
+    document.getElementById("adminPendingOrders").innerText = inProgress;
+    document.getElementById("adminTotalSales").innerText = admMoney(sales);
+    document.getElementById("adminLatestCustomer").innerText = customers[0] ? customers[0].name : "-";
+
+    document.getElementById("adminTabOrdersCount").innerText = orders.length;
+    document.getElementById("adminTabCustomersCount").innerText = customers.length;
+}
+
+
+/* ---------- CUSTOMERS ---------- */
+
+// Server se saare registered customers laata hai
+async function loadAdminCustomers() {
+
+    const empty = document.getElementById("adminEmpty");
+
+    try {
+
+        const res = await adminFetch(ADMIN_API_CUSTOMERS);
+        if (!res) return;
+
+        const data = await res.json();
+
+        if (!data.success) {
+            empty.style.display = "block";
+            empty.innerText = data.message || "Could not load customers";
+            return;
+        }
+
+        ADMIN_UI.customers = data.customers || [];
+
+        updateAdminStats();
+        filterAdminCustomers();
+
+    } catch (err) {
+        console.log("Admin customers error:", err);
+        empty.style.display = "block";
+        empty.innerText = "Server error. Please try again.";
+    }
+}
+
+// Search box ke hisaab se customers chhanta hai
+function filterAdminCustomers() {
+
+    const search = document.getElementById("adminSearch");
+    const q = search ? search.value.trim().toLowerCase() : "";
+
+    const list = !q
+        ? ADMIN_UI.customers
+        : ADMIN_UI.customers.filter(c =>
+            [c.name, c.email, c.mobile, c.address, c.district, c.state, c.pincode]
+                .some(v => String(v || "").toLowerCase().includes(q))
+        );
+
+    renderAdminCustomers(list);
+}
+
+// Customers ki table banata hai
+function renderAdminCustomers(list) {
+
+    const body = document.getElementById("adminCustomerRows");
+    const empty = document.getElementById("adminEmpty");
+    const count = document.getElementById("adminCount");
+
+    count.innerText = `Showing ${list.length} of ${ADMIN_UI.customers.length} customers`;
+
+    if (!list.length) {
+        body.innerHTML = "";
+        empty.style.display = "block";
+        empty.innerText = "No customers found.";
+        return;
+    }
+
+    empty.style.display = "none";
+
+    body.innerHTML = list.map(c => `
+        <tr>
+            <td>#${admEsc(c.id)}</td>
+            <td>${admEsc(c.name)}</td>
+            <td>${admEsc(c.email)}</td>
+            <td>${admEsc(c.mobile)}</td>
+            <td>${admEsc(c.address)}</td>
+            <td>${admEsc(c.district)}</td>
+            <td>${admEsc(c.state)}</td>
+            <td>${admEsc(c.pincode)}</td>
+        </tr>
+    `).join("");
+}
+
+
+/* ---------- ORDERS + TRACKING ---------- */
+
+// Server se saare orders laata hai (har order ke saath uska tracking status bhi aata hai)
+async function loadAdminOrders() {
+
+    const empty = document.getElementById("adminOrderEmpty");
+
+    try {
+
+        const res = await adminFetch(ADMIN_API_ORDERS);
+        if (!res) return;
+
+        const data = await res.json();
+
+        if (!data.success) {
+            empty.style.display = "block";
+            empty.innerText = data.message || "Could not load orders";
+            return;
+        }
+
+        ADMIN_UI.orders = data.orders || [];
+
+        updateAdminStats();
+        filterAdminOrders();
+
+    } catch (err) {
+        console.log("Admin orders error:", err);
+        empty.style.display = "block";
+        empty.innerText = "Server error. Please try again.";
+    }
+}
+
+// Search aur status filter ke hisaab se orders chhanta hai
+function filterAdminOrders() {
+
+    const search = document.getElementById("adminOrderSearch");
+    const filter = document.getElementById("adminOrderFilter");
+
+    const q = search ? search.value.trim().toLowerCase() : "";
+    const status = filter ? filter.value : "all";
+
+    const list = ADMIN_UI.orders.filter(o => {
+
+        if (status !== "all" && admStatusOf(o) !== status) return false;
+        if (!q) return true;
+
+        const names = admItems(o).map(i => i.name);
+
+        return [o.id, o.customerName, o.customerEmail, o.phone, o.address, ...names]
+            .some(v => String(v || "").toLowerCase().includes(q));
+    });
+
+    renderAdminOrders(list);
+}
+
+// Ek order ka payment badge (COD / Paid Online / Online pending)
+function admPayBadge(order) {
+
+    if (order.paymentMethod === "online") {
+        return order.paymentStatus === "paid"
+            ? '<span class="adm-badge adm-badge-green">Paid Online</span>'
+            : `<span class="adm-badge adm-badge-orange">Online · ${admEsc(order.paymentStatus || "pending")}</span>`;
+    }
+
+    return '<span class="adm-badge adm-badge-gold">Cash on Delivery</span>';
+}
+
+// Ek order ka poora card banata hai: customer, items, total aur tracking update ka hissa
+function admOrderCard(order) {
+
+    const id = Number(order.id);
+    const status = admStatusOf(order);
+    const current = ADMIN_STATUS_LIST.findIndex(s => s.key === status);
+    const currentInfo = ADMIN_STATUS_LIST[current];
+
+    const items = admItems(order).map(i => `
+        <li>
+            <span>${admEsc(i.name)}</span>
+            <b>× ${admEsc(i.qty)}</b>
+            <em>${admMoney(Number(i.price) * Number(i.qty))}</em>
+        </li>
+    `).join("");
+
+    const steps = ADMIN_STATUS_LIST.map((s, n) => `
+        <div class="adm-step ${n < current ? "done" : ""} ${n === current ? "current" : ""}">
+            <span class="adm-dot">${s.icon}</span>
+            <small>${s.short}</small>
+        </div>
+    `).join("");
+
+    const options = ADMIN_STATUS_LIST.map(s =>
+        `<option value="${s.key}" ${s.key === status ? "selected" : ""}>${s.label}</option>`
+    ).join("");
+
+    return `
+    <article class="adm-order" id="admOrder-${id}">
+
+        <div class="adm-order-main">
+            <div class="adm-order-head">
+                <span class="adm-order-id">Order #${id}</span>
+                <span class="adm-order-date">${admEsc(admDate(order.createdAt))}</span>
+                <div class="adm-badges">${admPayBadge(order)}</div>
+            </div>
+
+            <div class="adm-cust">
+                <b>${admEsc(order.customerName)}</b>
+                <p>📞 ${admEsc(order.phone)} &nbsp;·&nbsp; ✉ ${admEsc(order.customerEmail)}</p>
+                <p>📍 ${admEsc(order.address)}</p>
+            </div>
+
+            <ul class="adm-items">${items}</ul>
+
+            <div class="adm-total">
+                <span>Total Amount</span>
+                <b>${admMoney(order.totalAmount)}</b>
+            </div>
+        </div>
+
+        <div class="adm-order-side">
+            <div class="adm-side-top">
+                <span class="adm-side-title">DELIVERY TRACKING</span>
+                <span class="adm-pill adm-pill-${status}">${currentInfo.label}</span>
+            </div>
+
+            <div class="adm-track ${status === "delivered" ? "is-delivered" : ""}">${steps}</div>
+
+            <label class="adm-side-label" for="admStatus-${id}">Update order status</label>
+
+            <div class="adm-update">
+                <select id="admStatus-${id}" class="adm-select">${options}</select>
+                <button type="button" class="adm-save" id="admSave-${id}" onclick="saveOrderStatus(${id})">Update</button>
+            </div>
+
+            <p class="adm-side-note">The customer sees this status in their order tracking right away.</p>
+        </div>
+
+    </article>
+    `;
+}
+
+// Orders ke cards screen par dikhata hai
+function renderAdminOrders(list) {
+
+    const box = document.getElementById("adminOrderList");
+    const empty = document.getElementById("adminOrderEmpty");
+    const count = document.getElementById("adminOrderCount");
+
+    count.innerText = `Showing ${list.length} of ${ADMIN_UI.orders.length} orders`;
+
+    if (!list.length) {
+        box.innerHTML = "";
+        empty.style.display = "block";
+        empty.innerText = ADMIN_UI.orders.length
+            ? "No orders match your search."
+            : "No orders yet. New orders will appear here.";
+        return;
+    }
+
+    empty.style.display = "none";
+    box.innerHTML = list.map(admOrderCard).join("");
+}
+
+// "Update" button: chuna hua status DB me save karta hai.
+// Isi status se customer ke site par uska tracking badal jata hai.
+async function saveOrderStatus(id) {
+
+    const select = document.getElementById("admStatus-" + id);
+    const button = document.getElementById("admSave-" + id);
+    if (!select || !button) return;
+
+    const status = select.value;
+
+    button.disabled = true;
+    button.innerText = "Saving...";
+
+    try {
+
+        const res = await adminFetch(`${ADMIN_API_ORDERS}/${id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status })
+        });
+
+        if (!res) return;
+
+        const data = await res.json();
+
+        if (!data.success) {
+            admToast(data.message || "Could not update status", true);
+            button.disabled = false;
+            button.innerText = "Update";
+            return;
+        }
+
+        const order = ADMIN_UI.orders.find(o => Number(o.id) === Number(id));
+        if (order) order.status = status;
+
+        const label = ADMIN_STATUS_LIST.find(s => s.key === status).label;
+
+        updateAdminStats();
+        filterAdminOrders();
+
+        admToast(`Order #${id} is now "${label}"`);
+
+    } catch (err) {
+        console.log("Update status error:", err);
+        admToast("Server error. Please try again.", true);
+        button.disabled = false;
+        button.innerText = "Update";
+    }
+}
+
+// Customer ke "My Orders" me tracking dikhane ke kaam aata hai: status se progress % aur naam deta hai
+function orderTrackingFromStatus(status) {
+
+    const index = Math.max(0, ADMIN_STATUS_LIST.findIndex(s => s.key === status));
+
+    return {
+        index,
+        progress: (index + 1) * 25,
+        label: ADMIN_STATUS_LIST[index].label
+    };
+}

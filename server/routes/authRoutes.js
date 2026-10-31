@@ -23,6 +23,7 @@ router.get("/my-orders", c.requireUser, c.requireCustomer, c.getMyOrders);
 /* ADMIN (admin token zaroori) */
 router.get("/admin/customers", c.requireAdmin, c.getAllCustomers);
 router.get("/admin/orders", c.requireAdmin, c.getAllOrders);
+router.patch("/admin/orders/:id/status", c.requireAdmin, c.updateOrderStatus);
 router.get("/login-stats", c.requireAdmin, c.getLoginStats);
 
 module.exports = router;

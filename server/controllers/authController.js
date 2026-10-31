@@ -46,6 +46,9 @@ function cleanAddress(a) {
   return x;
 }
 
+// Delivery tracking ke 4 allowed status (inhi se customer ke site par tracking dikhta hai)
+const ORDER_STATUSES = ["placed", "dispatched", "out_for_delivery", "delivered"];
+
 /* ================= REGISTER (customers table) ================= */
 
 exports.registerCustomer = async (req, res) => {
@@ -453,7 +456,8 @@ exports.placeOrder = async (req, res) => {
       paymentMethod: method,
       paymentStatus,
       razorpayOrderId: rzpOrderId,
-      razorpayPaymentId: rzpPaymentId
+      razorpayPaymentId: rzpPaymentId,
+      status: "placed"
     });
 
     // Customer aur admin ko mail (background me, order ko rokta nahi)
@@ -468,7 +472,7 @@ exports.placeOrder = async (req, res) => {
   }
 };
 
-// Customer apne orders dekhta hai
+// Customer apne orders dekhta hai (har order ke saath uska tracking "status" bhi aata hai)
 exports.getMyOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
@@ -508,6 +512,32 @@ exports.getAllOrders = async (req, res) => {
 
   } catch (err) {
     console.log("Admin orders error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Admin kisi order ka delivery tracking status badalta hai (placed / dispatched / out_for_delivery / delivered)
+exports.updateOrderStatus = async (req, res) => {
+  try {
+    const status = String(req.body.status || "").trim().toLowerCase();
+
+    if (!ORDER_STATUSES.includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid status" });
+    }
+
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    order.status = status;
+    await order.save();
+
+    res.json({ success: true, message: "Status updated", status: order.status });
+
+  } catch (err) {
+    console.log("Update order status error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };

@@ -39,52 +39,122 @@
         </nav>
     </header>
 
-    <!-- ADMIN PANEL: sirf admin login par dikhta hai -->
+ 
+   <!-- ADMIN PANEL: sirf admin login par dikhta hai (Orders + tracking update, Customers) -->
     <section id="adminPanel" class="page-section" style="display:none;">
+        <div class="adm-wrap">
 
-        <div class="admin-top">
-            <h2>🛠️ Admin Panel</h2>
-            <button class="admin-back-btn" onclick="closeAdminPanel()">⬅ Back to Website</button>
-        </div>
+            <!-- Header -->
+            <div class="adm-header">
+                <div class="adm-header-text">
+                    <span class="adm-label">ADMIN DASHBOARD</span>
+                    <h2>Manage Your <span>Business</span></h2>
+                    <p>View customers and update the delivery tracking of every order from here.</p>
+                    <span class="adm-chip">Latest customer: <b id="adminLatestCustomer">-</b></span>
+                </div>
 
-        <div class="admin-stats">
-            <div class="admin-stat"><span>Total Customers</span><b id="adminTotalCustomers">0</b></div>
-            <div class="admin-stat"><span>States</span><b id="adminTotalStates">0</b></div>
-            <div class="admin-stat"><span>Latest Customer</span><b id="adminLatestCustomer">-</b></div>
-        </div>
+                <div class="adm-header-actions">
+                    <button type="button" class="adm-btn adm-btn-ghost" onclick="refreshAdminPanel()">⟳ Refresh</button>
+                    <button type="button" class="adm-btn" onclick="closeAdminPanel()">← Back to Website</button>
+                </div>
+            </div>
 
-        <input type="text" id="adminSearch" class="admin-search"
-               placeholder="Search name, email, mobile, district, state, pin..."
-               oninput="filterAdminCustomers()">
+            <!-- Stats -->
+            <div class="adm-stats">
+                <div class="adm-stat">
+                    <div class="adm-stat-icon">👥</div>
+                    <div><span>Total Customers</span><b id="adminTotalCustomers">0</b></div>
+                </div>
+                <div class="adm-stat">
+                    <div class="adm-stat-icon">🗺️</div>
+                    <div><span>States Covered</span><b id="adminTotalStates">0</b></div>
+                </div>
+                <div class="adm-stat">
+                    <div class="adm-stat-icon">📦</div>
+                    <div><span>Total Orders</span><b id="adminTotalOrders">0</b></div>
+                </div>
+                <div class="adm-stat">
+                    <div class="adm-stat-icon">🚚</div>
+                    <div><span>In Progress</span><b id="adminPendingOrders">0</b></div>
+                </div>
+                <div class="adm-stat">
+                    <div class="adm-stat-icon">₹</div>
+                    <div><span>Total Sales</span><b id="adminTotalSales">₹0</b></div>
+                </div>
+            </div>
 
-        <p id="adminCount" class="admin-count"></p>
+            <!-- Tabs -->
+            <div class="adm-tabs" role="tablist">
+                <button type="button" id="adminTabBtnOrders" class="adm-tab active" onclick="adminTab('orders')">
+                    📦 Orders <i id="adminTabOrdersCount">0</i>
+                </button>
+                <button type="button" id="adminTabBtnCustomers" class="adm-tab" onclick="adminTab('customers')">
+                    👥 Customers <i id="adminTabCustomersCount">0</i>
+                </button>
+            </div>
 
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th><th>Name</th><th>Email</th><th>Mobile</th>
-                        <th>Address</th><th>District</th><th>State</th><th>Pin</th>
-                    </tr>
-                </thead>
-                <tbody id="adminCustomerRows"></tbody>
-            </table>
-        </div>
+            <!-- ORDERS TAB -->
+            <div id="adminTabOrders" class="adm-pane">
 
-        <p id="adminEmpty" class="admin-empty"></p>
+                <div class="adm-toolbar">
+                    <div class="adm-search-box">
+                        <span>🔍</span>
+                        <input type="text" id="adminOrderSearch"
+                               placeholder="Search by order ID, customer, phone, address or product..."
+                               oninput="filterAdminOrders()">
+                    </div>
 
-        <h3 style="margin:30px 0 10px;">📦 Orders</h3>
+                    <select id="adminOrderFilter" class="adm-select" onchange="filterAdminOrders()">
+                        <option value="all">All statuses</option>
+                        <option value="placed">Order Placed</option>
+                        <option value="dispatched">Dispatched</option>
+                        <option value="out_for_delivery">Out for Delivery</option>
+                        <option value="delivered">Delivered</option>
+                    </select>
+                </div>
 
-        <div class="admin-table-wrap">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th><th>Customer</th><th>Phone</th><th>Address</th>
-                        <th>Items</th><th>Total</th><th>Payment</th><th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="adminOrderRows"></tbody>
-            </table>
+                <p id="adminOrderCount" class="adm-count"></p>
+
+                <div id="adminOrderList" class="adm-order-list"></div>
+
+                <p id="adminOrderEmpty" class="adm-empty" style="display:none;"></p>
+            </div>
+
+            <!-- CUSTOMERS TAB -->
+            <div id="adminTabCustomers" class="adm-pane" style="display:none;">
+
+                <div class="adm-toolbar">
+                    <div class="adm-search-box">
+                        <span>🔍</span>
+                        <input type="text" id="adminSearch"
+                               placeholder="Search name, email, mobile, district, state, pin..."
+                               oninput="filterAdminCustomers()">
+                    </div>
+                </div>
+
+                <p id="adminCount" class="adm-count"></p>
+
+                <div class="adm-table-wrap">
+                    <table class="adm-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Mobile</th>
+                                <th>Address</th>
+                                <th>District</th>
+                                <th>State</th>
+                                <th>Pin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminCustomerRows"></tbody>
+                    </table>
+                </div>
+
+                <p id="adminEmpty" class="adm-empty" style="display:none;"></p>
+            </div>
+
         </div>
     </section>
 
