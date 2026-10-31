@@ -7,7 +7,7 @@ const Admin = require("../models/Admin");
 const Order = require("../models/Order");
 const Address = require("../models/Address");
 const User = require("../models/User");
-const { sendOrderEmails } = require("../utils/mailer");
+const { sendOrderEmails } = require("../utils/Mailer");
 
 /* ================= HELPERS ================= */
 
