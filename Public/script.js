@@ -5,10 +5,10 @@
    Sections:
    00 Page start        01 Hero 3D           02 Video
    03 Home products     04 Pages switch      05 Chatbot
-   06 Login / Register  07 Navbar + Profile  08 Notifications
-   09 Order page        10 Profile photo     11 Payment
-   12 Sidebar + Orders  13 Admin panel       14 Featured products
-   15 Compatibility aliases
+   06 Login / Register  07 Navbar + Helpers 08 Notifications
+   09 Order page + Checkout                  10 Profile photo
+   11 Payment           12 Account panel (profile, orders, addresses, notifications)
+   13 Admin panel       14 Featured products 15 Compatibility aliases
    ===================================================== */
 
 
@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
     initProfileImage();
     initFeaturedProducts();
     updateNavbar();
-    updateNotificationCount();
 
 });
 
@@ -141,7 +140,7 @@ function showDetail(product) {
 
 /* ================= 04. PAGES SWITCH ================= */
 
-// Saare pages (Home, About, Address, Order, My Orders, Admin Panel) ek saath chhupata hai
+// Saare pages (Home, About, Address, Order, Admin Panel) ek saath chhupata hai
 function hideAllPages() {
 
     const pageIds = [
@@ -412,11 +411,14 @@ function authTogglePass(inputId, icon) {
 
 }
 
-// Esc dabane par ya popup ke bahar click karne par login popup band karta hai
+// Esc dabane par ya popup ke bahar click karne par login popup / account panel band karta hai
 function initAuthPopups() {
 
     document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape") authHideAll();
+        if (e.key === "Escape") {
+            authHideAll();
+            closeAccountPanel();
+        }
     });
 
     const popup = document.getElementById("customerLoginPopup");
@@ -477,7 +479,7 @@ async function createCustomerAccount() {
 
 // EK HI LOGIN: server batata hai ki ye admin hai ya customer.
 // Admin (DB ke admins table ka email/password) -> Admin Panel khulta hai.
-// Koi aur email/password (customers table) -> normal customer ka page (profile panel) khulta hai.
+// Koi aur email/password (customers table) -> account panel khulta hai.
 async function customerLogin() {
 
     const email = document.getElementById("customerEmail").value.trim();
@@ -514,7 +516,7 @@ async function customerLogin() {
             address: account.address
         }));
 
-        // Login token (order dene aur My Orders dekhne ke liye server ko bhejna padta hai)
+        // Login token (order dene aur account panel ke liye server ko bhejna padta hai)
         localStorage.setItem("authToken", data.token);
 
         const isAdmin = data.role === "admin";
@@ -536,10 +538,15 @@ async function customerLogin() {
         loadProfileImage();
         authHideAll();
 
+        const checkoutOpen = document.getElementById("zxCheckoutView")?.style.display === "block";
+
         if (isAdmin) {
             openAdminPanel();
+        } else if (checkoutOpen) {
+            // Checkout par login kiya to wahi checkout form dikha do
+            zxRenderCheckout();
         } else {
-            toggleProfile();
+            openAccountPanel();
         }
 
     } catch (err) {
@@ -550,58 +557,44 @@ async function customerLogin() {
 }
 
 
-/* ================= 07. NAVBAR + PROFILE ================= */
+/* ================= 07. NAVBAR + HELPERS ================= */
 
-// Login hone par navbar badalta hai (profile icon, bell, menu dikhata hai, Login button chhupata hai).
-// Logout hone par ulta karta hai. Admin ho to sidebar me "Admin Panel" bhi dikhata hai.
+// Admin login hai ya nahi
+function isAdminUser() {
+
+    return localStorage.getItem("owner") === "true" && !!getAdminToken();
+
+}
+
+// Login hone par navbar badalta hai (profile photo dikhata hai, Login button chhupata hai).
+// Logout hone par ulta karta hai.
 function updateNavbar() {
 
     const user = JSON.parse(localStorage.getItem("user"));
-    const notifIcon = document.getElementById("notificationIcon");
-    const menuBtn = document.getElementById("menuBtn");
-    const adminMenu = document.getElementById("adminMenuItem");
-
-    const isAdmin = localStorage.getItem("owner") === "true" && !!getAdminToken();
+    const loginBtn = document.getElementById("loginBtn");
+    const profileArea = document.getElementById("profileArea");
 
     if (user) {
 
-        document.getElementById("loginBtn").style.display = "none";
-        document.getElementById("profileArea").style.display = "inline-block";
+        if (loginBtn) loginBtn.style.display = "none";
+        if (profileArea) profileArea.style.display = "flex";
 
-        if (notifIcon) notifIcon.style.display = "inline-block";
-        if (menuBtn) menuBtn.style.display = "block";
-        if (adminMenu) adminMenu.style.display = isAdmin ? "block" : "none";
+        const nameEl = document.getElementById("accName");
+        const emailEl = document.getElementById("accEmail");
+        const roleEl = document.getElementById("accRole");
 
-        document.getElementById("pName").innerText = user.name || "";
-        document.getElementById("pEmail").innerText = user.email || "";
-        document.getElementById("pUsername").innerText = user.username || "";
-        document.getElementById("pAddress").innerText = user.address || "";
+        if (nameEl) nameEl.textContent = user.name || "";
+        if (emailEl) emailEl.textContent = user.email || "";
+        if (roleEl) roleEl.textContent = isAdminUser() ? "Admin" : "Customer";
 
     } else {
 
-        document.getElementById("loginBtn").style.display = "inline-block";
-        document.getElementById("profileArea").style.display = "none";
+        if (loginBtn) loginBtn.style.display = "inline-block";
+        if (profileArea) profileArea.style.display = "none";
 
-        if (notifIcon) notifIcon.style.display = "none";
-        if (menuBtn) menuBtn.style.display = "none";
-        if (adminMenu) adminMenu.style.display = "none";
     }
-}
 
-// Profile panel (right side) kholta hai
-function toggleProfile() {
-
-    document.getElementById("profilePanel").classList.add("active");
-    document.getElementById("profileOverlay").classList.add("active");
-
-}
-
-// Profile panel band karta hai
-function closeProfile() {
-
-    document.getElementById("profilePanel").classList.remove("active");
-    document.getElementById("profileOverlay").classList.remove("active");
-
+    updateNotificationCount();
 }
 
 // Logout: saved user, admin flag aur dono token hatakar page reload karta hai
@@ -616,7 +609,7 @@ function logoutUser() {
 
 }
 
-// Current user ka login token (customer ya admin dono ka). Order aur My Orders ke liye chahiye
+// Current user ka login token (customer ya admin dono ka)
 function getAuthToken() {
 
     return localStorage.getItem("authToken");
@@ -632,87 +625,83 @@ function getUserKey() {
 
 }
 
+// Login token ke saath server ko request bhejta hai.
+// Token purana ho to logout karwa deta hai. Result JSON deta hai (ya null)
+async function authFetch(url, options = {}) {
+
+    const token = getAuthToken();
+
+    if (!token) {
+        authShowLogin();
+        return null;
+    }
+
+    try {
+
+        const res = await fetch(url, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...(options.headers || {}),
+                Authorization: "Bearer " + token
+            }
+        });
+
+        if (res.status === 401) {
+            alert("Session expired. Please login again.");
+            logoutUser();
+            return null;
+        }
+
+        return await res.json();
+
+    } catch (err) {
+        console.log("Request error:", url, err);
+        return { success: false, message: "Server error. Please try again." };
+    }
+
+}
+
+// Text ko HTML me safe banata hai (XSS se bachav)
+function escapeHTML(value) {
+
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[ch]));
+
+}
+
 
 /* ================= 08. NOTIFICATIONS ================= */
 
-// Notification panel kholta / band karta hai
-function toggleNotifications() {
+// Notification.js ki list deta hai (nahi mili to khaali list)
+function getNotificationList() {
 
-    const panel = document.getElementById("notificationPanel");
-    panel.classList.toggle("active");
-    loadNotifications();
-
-}
-
-// Notification list ko panel me dikhata hai (data Notification.js ke customNotifications se aata hai)
-function loadNotifications() {
-
-    const list = document.getElementById("notifList");
-
-    list.innerHTML = "";
-
-    const hasData = typeof customNotifications !== "undefined"
-        && customNotifications
-        && customNotifications.length > 0;
-
-    if (!hasData) {
-        list.innerHTML = "<p>No Notifications</p>";
-        return;
-    }
-
-    customNotifications.forEach((notif, index) => {
-
-        list.innerHTML += `
-        <div class="notif-card" onclick="toggleNotifDetail(${index})">
-
-            <div class="notif-title">
-                <b>${notif.title}</b>
-                <span>${notif.date}</span>
-            </div>
-
-            <div class="notif-detail" id="notif-${index}" style="display:none;">
-                <p>${notif.message}</p>
-            </div>
-
-        </div>
-        `;
-    });
+    return (typeof customNotifications !== "undefined" && Array.isArray(customNotifications))
+        ? customNotifications
+        : [];
 
 }
 
-// Ek notification par click karne par uski detail kholta hai, baaki band karta hai
-function toggleNotifDetail(index) {
-
-    const allDetails = document.querySelectorAll(".notif-detail");
-
-    allDetails.forEach(el => {
-        if (el.id !== "notif-" + index) {
-            el.style.display = "none";
-        }
-    });
-
-    const target = document.getElementById("notif-" + index);
-
-    if (target) {
-        target.style.display =
-            target.style.display === "block" ? "none" : "block";
-    }
-
-}
-
-// Bell icon ke upar notifications ki ginti dikhata hai
+// Profile photo ke upar chhota badge: kitni notifications hain
 function updateNotificationCount() {
 
-    const countEl = document.getElementById("notifCount");
-    if (!countEl) return;
+    const badge = document.getElementById("profileBadge");
+    if (!badge) return;
 
-    const hasList = typeof customNotifications !== "undefined" && customNotifications;
-    countEl.innerText = hasList ? customNotifications.length : 0;
+    const n = isAdminUser() ? 0 : getNotificationList().length;
+
+    badge.textContent = n;
+    badge.style.display = n ? "flex" : "none";
 
 }
 
 
-/* ================= 09. ORDER PAGE ================= */
+/* ================= 09. ORDER PAGE + CHECKOUT ================= */
 
 let zxHistory = [];
 let zxCart = [];
@@ -865,6 +854,13 @@ function zxUpdateCartCount() {
     }
 }
 
+// Cart ka total paisa
+function zxCartTotal() {
+
+    return zxCart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+}
+
 // "Buy Now": sirf ye ek product cart me rakhkar seedha checkout kholta hai
 function zxBuyNow(id) {
 
@@ -985,7 +981,13 @@ function zxShowCart() {
     cartBox.innerHTML = html;
 }
 
-// Checkout page: naam, address, phone aur payment method (COD / Net Banking)
+/* ---------- CHECKOUT ---------- */
+
+let myAddresses = [];     // customer ke saved addresses (server se)
+let coAddrId = "new";     // checkout me chuna hua address ("new" = naya address)
+let coMethod = "cod";     // checkout me chuna hua payment ("cod" ya "online")
+
+// Checkout page kholta hai (pichhli screen history me jodta hai) aur form banata hai
 function zxCheckout() {
 
     if (zxCart.length === 0) {
@@ -1008,46 +1010,208 @@ function zxCheckout() {
 
     window.scrollTo({ top: 0, behavior: "smooth" });
 
-    let total = 0;
-    zxCart.forEach(item => total += item.price * item.qty);
-
-    chk.innerHTML = `
-        <h2>Checkout</h2>
-
-        <h3>Total Amount: ₹${total}</h3>
-
-        <input class="zxInput" id="zxCheckoutName" placeholder="Full Name">
-        <input class="zxInput" id="zxCheckoutAddress" placeholder="Address">
-        <input class="zxInput" id="zxCheckoutPhone" placeholder="Phone">
-
-        <h3>Payment Method</h3>
-
-        <select class="zxInput" id="paymentMethod" onchange="togglePayButton()">
-            <option value="cod">Cash on Delivery</option>
-            <option value="online">Net Banking</option>
-        </select>
-
-        <button class="zxBtn buyBtn" id="placeOrderBtn" onclick="zxPlaceOrder()">Place Order</button>
-        <button class="zxBtn buyBtn" id="payNowBtn" style="display:none;" onclick="payNow()">💳 Pay Now</button>
-        <button class="zxBtn backBtn" onclick="zxGoBack()">⬅ Back</button>
-    `;
+    zxRenderCheckout();
 }
 
-// Payment method ke hisaab se "Place Order" ya "Pay Now" button dikhata hai
-function togglePayButton() {
+// Checkout ka form banata hai: login check -> saved addresses laata hai -> design dikhata hai
+async function zxRenderCheckout() {
 
-    const method = document.getElementById("paymentMethod").value;
+    const chk = document.getElementById("zxCheckoutView");
+    if (!chk) return;
 
-    const placeBtn = document.getElementById("placeOrderBtn");
-    const payBtn = document.getElementById("payNowBtn");
-
-    if (method === "online") {
-        placeBtn.style.display = "none";
-        payBtn.style.display = "block";
-    } else {
-        placeBtn.style.display = "block";
-        payBtn.style.display = "none";
+    // Login nahi hai
+    if (!getAuthToken()) {
+        chk.innerHTML = `
+            <div class="co-card co-center">
+                <div class="co-big-icon">🔐</div>
+                <h2>Login to continue</h2>
+                <p>Please login or create an account to place your order.</p>
+                <button class="co-place" onclick="authShowLogin()">Login / Register</button>
+                <button class="co-back" onclick="zxGoBack()">⬅ Back</button>
+            </div>`;
+        return;
     }
+
+    // Admin order nahi kar sakta
+    if (isAdminUser()) {
+        chk.innerHTML = `
+            <div class="co-card co-center">
+                <div class="co-big-icon">🛠️</div>
+                <h2>Admin account</h2>
+                <p>Orders can be placed only from a customer account. Please logout and login as a customer.</p>
+                <button class="co-back" onclick="zxGoBack()">⬅ Back</button>
+            </div>`;
+        return;
+    }
+
+    chk.innerHTML = `<div class="co-card co-center"><p>Loading checkout...</p></div>`;
+
+    await loadAddresses();
+
+    // Default address pehle se chuna hua dikhe, nahi hai to naya address form
+    const def = myAddresses.find(a => a.isDefault) || myAddresses[0];
+    coAddrId = def ? String(def.id) : "new";
+    coMethod = "cod";
+
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+
+    const addrCards = myAddresses.map(a => `
+        <label class="co-addr ${String(a.id) === coAddrId ? "selected" : ""}" data-id="${a.id}">
+            <input type="radio" name="coAddr" value="${a.id}" ${String(a.id) === coAddrId ? "checked" : ""}
+                   onchange="coSelectAddr('${a.id}')">
+            <div>
+                <div class="co-addr-top">
+                    <span class="co-tag">${escapeHTML(a.label || "Home")}</span>
+                    ${a.isDefault ? '<span class="co-tag co-tag-def">Default</span>' : ""}
+                </div>
+                <b>${escapeHTML(a.fullName)}</b> <span class="co-phone">${escapeHTML(a.phone)}</span>
+                <p>${formatAddressLine(a)}</p>
+            </div>
+        </label>
+    `).join("");
+
+    const items = zxCart.map(i => `
+        <div class="co-item">
+            <img src="${escapeHTML(i.img)}" alt="">
+            <div>
+                <b>${escapeHTML(i.name)}</b>
+                <small>Qty ${i.qty} × ₹${i.price}</small>
+            </div>
+            <span>₹${i.price * i.qty}</span>
+        </div>
+    `).join("");
+
+    chk.innerHTML = `
+    <div class="co-wrap">
+
+        <div class="co-main">
+
+            <div class="co-card">
+                <div class="co-step"><span>1</span><h3>Delivery Address</h3></div>
+
+                <div class="co-addr-list">
+                    ${addrCards}
+
+                    <label class="co-addr co-addr-new ${coAddrId === "new" ? "selected" : ""}" data-id="new">
+                        <input type="radio" name="coAddr" value="new" ${coAddrId === "new" ? "checked" : ""}
+                               onchange="coSelectAddr('new')">
+                        <div><b>＋ Deliver to a new address</b><p>Enter a different delivery address</p></div>
+                    </label>
+                </div>
+
+                <div id="coNewForm" style="display:${coAddrId === "new" ? "block" : "none"};">
+                    ${addressFormHTML("coNew", { name: user.name, phone: user.mobile })}
+                    <label class="co-check">
+                        <input type="checkbox" id="coSaveAddr" checked>
+                        Save this address for my next orders
+                    </label>
+                </div>
+            </div>
+
+            <div class="co-card">
+                <div class="co-step"><span>2</span><h3>Payment Method</h3></div>
+
+                <div class="co-pay">
+                    <label class="co-pay-opt selected" data-method="cod">
+                        <input type="radio" name="coPay" value="cod" checked onchange="coSelectPay('cod')">
+                        <div><b>💰 Cash on Delivery</b><small>Pay when your order arrives</small></div>
+                    </label>
+
+                    <label class="co-pay-opt" data-method="online">
+                        <input type="radio" name="coPay" value="online" onchange="coSelectPay('online')">
+                        <div><b>💳 Pay Online</b><small>UPI, Card or Net Banking (secure)</small></div>
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
+        <aside class="co-card co-summary">
+            <h3>Order Summary</h3>
+
+            <div class="co-items">${items}</div>
+
+            <div class="co-row"><span>Subtotal</span><span>₹${zxCartTotal()}</span></div>
+            <div class="co-row"><span>Delivery</span><span class="co-free">FREE</span></div>
+            <div class="co-row co-total"><span>Total</span><span>₹${zxCartTotal()}</span></div>
+
+            <button class="co-place" id="coPlaceBtn" onclick="coSubmit()">${coButtonLabel()}</button>
+            <button class="co-back" onclick="zxGoBack()">⬅ Back</button>
+
+            <p class="co-secure">🔒 Your details are safe. A confirmation email will be sent after the order.</p>
+        </aside>
+
+    </div>`;
+}
+
+// Checkout button par kya likha dikhe (payment method ke hisaab se)
+function coButtonLabel() {
+
+    return coMethod === "online"
+        ? `Pay ₹${zxCartTotal()} & Place Order`
+        : `Place Order • ₹${zxCartTotal()}`;
+
+}
+
+// Saved address chunne par card highlight karta hai. "new" par naya address form kholta hai
+function coSelectAddr(id) {
+
+    coAddrId = String(id);
+
+    document.querySelectorAll(".co-addr").forEach(el => {
+        el.classList.toggle("selected", el.dataset.id === coAddrId);
+    });
+
+    const form = document.getElementById("coNewForm");
+    if (form) form.style.display = coAddrId === "new" ? "block" : "none";
+
+}
+
+// Payment method chunne par card highlight karta hai aur button ka text badalta hai
+function coSelectPay(method) {
+
+    coMethod = method;
+
+    document.querySelectorAll(".co-pay-opt").forEach(el => {
+        el.classList.toggle("selected", el.dataset.method === method);
+    });
+
+    const btn = document.getElementById("coPlaceBtn");
+    if (btn) btn.textContent = coButtonLabel();
+
+}
+
+// Checkout ka data jodta hai (chuna hua address + payment). Form adhura ho to null deta hai
+function coCollect() {
+
+    const payload = { paymentMethod: coMethod };
+
+    if (coAddrId !== "new") {
+        payload.addressId = Number(coAddrId);
+        return payload;
+    }
+
+    const address = readAddressForm("coNew");
+    if (!address) return null;
+
+    payload.address = address;
+    payload.saveAddress = !!document.getElementById("coSaveAddr")?.checked;
+
+    return payload;
+}
+
+// "Place Order" button: COD ho to seedha order, online ho to pehle payment
+function coSubmit() {
+
+    const payload = coCollect();
+    if (!payload) return;
+
+    if (coMethod === "online") {
+        payNow(payload);
+    } else {
+        zxPlaceOrder(null, payload);
+    }
+
 }
 
 // Order page ka "Back" button: pichhli screen (products / detail / cart) par wapas le jaata hai
@@ -1082,7 +1246,16 @@ function zxGoBack() {
 }
 
 // Order place hone ke baad hara "Order Placed Successfully" popup dikhata hai
-function showSuccessPopup() {
+function showSuccessPopup(orderId, email) {
+
+    const msg = document.getElementById("successMsg");
+
+    if (msg) {
+        msg.textContent = orderId
+            ? `Order #${orderId} is confirmed 🎉` + (email ? ` A confirmation email has been sent to ${email}.` : "")
+            : "Your order has been confirmed 🎉";
+    }
+
     document.getElementById("successPopup").style.display = "flex";
 }
 
@@ -1101,26 +1274,27 @@ function closeSuccessPopup() {
     window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Order ko server par bhejta hai (DB ke orders table me save hota hai), phir cart khaali karke success popup dikhata hai.
-// Login zaroori hai. Online payment ho to Razorpay ka response (paymentInfo) bhi saath jaata hai.
-async function zxPlaceOrder(paymentInfo) {
+// Success popup ka "View My Orders" button: popup band karke account panel ke My Orders me le jata hai
+function viewOrdersFromPopup() {
 
-    const token = getAuthToken();
+    closeSuccessPopup();
+    openAccountPanel("orders");
 
-    if (!token) {
+}
+
+// Order ko server par bhejta hai (orders table me save hota hai + customer aur admin ko mail jaati hai).
+// payload = coCollect() ka data, paymentInfo = online payment ho to Razorpay ka response
+async function zxPlaceOrder(paymentInfo, payload) {
+
+    if (!getAuthToken()) {
         alert("Please login to place an order");
         authShowLogin();
         return;
     }
 
-    const name = document.getElementById("zxCheckoutName")?.value.trim();
-    const address = document.getElementById("zxCheckoutAddress")?.value.trim();
-    const phone = document.getElementById("zxCheckoutPhone")?.value.trim();
-    const paymentMethod = document.getElementById("paymentMethod")?.value || "cod";
-
-    if (!name || !address || !phone) {
-        alert("Please fill name, address and phone");
-        return;
+    if (!payload) {
+        payload = coCollect();
+        if (!payload) return;
     }
 
     if (zxCart.length === 0) {
@@ -1128,47 +1302,144 @@ async function zxPlaceOrder(paymentInfo) {
         return;
     }
 
-    try {
+    const btn = document.getElementById("coPlaceBtn");
 
-        const res = await fetch("/api/auth/orders", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token
-            },
-            body: JSON.stringify({
-                items: zxCart,
-                name,
-                phone,
-                address,
-                paymentMethod,
-                razorpay: paymentMethod === "online" ? paymentInfo : null
-            })
-        });
-
-        if (res.status === 401) {
-            alert("Session expired. Please login again.");
-            logoutUser();
-            return;
-        }
-
-        const data = await res.json();
-
-        if (!data.success) {
-            alert(data.message || "Order failed");
-            return;
-        }
-
-        zxCart = [];
-        zxUpdateCartCount();
-
-        showSuccessPopup();
-        updateNotificationCount();
-
-    } catch (err) {
-        console.log("Order error:", err);
-        alert("Server error. Order not placed.");
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Placing your order...";
     }
+
+    const data = await authFetch("/api/auth/orders", {
+        method: "POST",
+        body: JSON.stringify({
+            items: zxCart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, img: i.img })),
+            ...payload,
+            razorpay: payload.paymentMethod === "online" ? paymentInfo : null
+        })
+    });
+
+    if (!data || !data.success) {
+
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = coButtonLabel();
+        }
+
+        if (data) {
+            const paid = payload.paymentMethod === "online" && paymentInfo && paymentInfo.razorpay_payment_id;
+
+            alert(paid
+                ? (data.message || "Order failed") + "\nYour payment id is " + paymentInfo.razorpay_payment_id + ". Please contact support."
+                : (data.message || "Order failed"));
+        }
+
+        return;
+    }
+
+    zxCart = [];
+    zxUpdateCartCount();
+
+    showSuccessPopup(data.orderId, data.emailTo);
+
+}
+
+
+/* ---------- ADDRESS FORM (checkout aur account panel dono me use hota hai) ---------- */
+
+// Address ka form (prefix se ids banti hain, jaise coNewName, accNewName)
+function addressFormHTML(p, d = {}) {
+
+    return `
+    <div class="af-grid">
+        <div class="af-field">
+            <label>Full Name</label>
+            <input id="${p}Name" type="text" placeholder="Receiver's name" value="${escapeHTML(d.name || "")}">
+        </div>
+        <div class="af-field">
+            <label>Mobile Number</label>
+            <input id="${p}Phone" type="tel" maxlength="13" placeholder="10 digit mobile" value="${escapeHTML(d.phone || "")}">
+        </div>
+        <div class="af-field af-full">
+            <label>Address (house no, street, area)</label>
+            <input id="${p}Line" type="text" placeholder="House no, street, area">
+        </div>
+        <div class="af-field">
+            <label>District</label>
+            <input id="${p}District" type="text" placeholder="District">
+        </div>
+        <div class="af-field">
+            <label>State</label>
+            <input id="${p}State" type="text" placeholder="State">
+        </div>
+        <div class="af-field">
+            <label>Pin Code</label>
+            <input id="${p}Pin" type="text" inputmode="numeric" maxlength="6" placeholder="6 digit pin code">
+        </div>
+        <div class="af-field">
+            <label>Save as</label>
+            <select id="${p}Label">
+                <option>Home</option>
+                <option>Work</option>
+                <option>Other</option>
+            </select>
+        </div>
+    </div>`;
+
+}
+
+// Address form se data padhta hai aur check karta hai. Galat ho to message dikhakar null deta hai
+function readAddressForm(p) {
+
+    const v = id => (document.getElementById(p + id)?.value || "").trim();
+
+    const a = {
+        fullName: v("Name"),
+        phone: v("Phone"),
+        line: v("Line"),
+        district: v("District"),
+        state: v("State"),
+        pincode: v("Pin"),
+        label: v("Label") || "Home"
+    };
+
+    if (!a.fullName || !a.phone || !a.line || !a.district || !a.state || !a.pincode) {
+        alert("Please fill all address fields");
+        return null;
+    }
+
+    if (a.phone.replace(/\D/g, "").length < 10) {
+        alert("Please enter a valid 10 digit mobile number");
+        return null;
+    }
+
+    if (!/^\d{6}$/.test(a.pincode)) {
+        alert("Please enter a valid 6 digit pin code");
+        return null;
+    }
+
+    return a;
+}
+
+// Address ko ek line me likhta hai (HTML safe)
+function formatAddressLine(a) {
+
+    const main = [a.line, a.district, a.state].filter(Boolean).join(", ");
+    return escapeHTML(a.pincode ? main + " - " + a.pincode : main);
+
+}
+
+// Server se customer ke saved addresses laata hai
+async function loadAddresses() {
+
+    const data = await authFetch("/api/auth/addresses");
+
+    if (data && data.success) {
+        myAddresses = data.addresses || [];
+        return true;
+    }
+
+    myAddresses = [];
+    return false;
 }
 
 
@@ -1189,7 +1460,7 @@ function loadProfileImage() {
 
 }
 
-// Profile photo badalne ke saare tareeke: photo par click -> Camera / Gallery options, aur unka kaam
+// Profile photo badalne ke saare tareeke: panel me photo par click -> Camera / Gallery options, aur unka kaam
 function initProfileImage() {
 
     const profileImg = document.querySelector(".profile-big");
@@ -1347,11 +1618,11 @@ function initProfileImage() {
 
 /* ================= 11. PAYMENT (RAZORPAY) ================= */
 
-// "Pay Now": pehle login aur checkout details check karta hai, phir server se Razorpay order banwata hai
-// aur payment window kholta hai. Payment safal hone par Razorpay ka response server ko bhejkar order save karta hai
-// (server signature verify karta hai).
+// Online payment: server se Razorpay order banwata hai aur payment window kholta hai.
+// Payment safal hone par Razorpay ka response server ko bhejkar order save karta hai (server signature verify karta hai).
+// payload = coCollect() ka data (chuna hua address + payment method)
 // NOTE: key naya generate karo to yahan "key" bhi badalna (key_id public hoti hai, secret server me hi rehta hai)
-async function payNow() {
+async function payNow(payload) {
 
     if (!getAuthToken()) {
         alert("Please login to place an order");
@@ -1359,24 +1630,19 @@ async function payNow() {
         return;
     }
 
-    const name = document.getElementById("zxCheckoutName")?.value.trim();
-    const address = document.getElementById("zxCheckoutAddress")?.value.trim();
-    const phone = document.getElementById("zxCheckoutPhone")?.value.trim();
-
-    if (!name || !address || !phone) {
-        alert("Please fill name, address and phone");
-        return;
+    if (!payload) {
+        payload = coCollect();
+        if (!payload) return;
     }
 
-    let total = 0;
-    zxCart.forEach(item => total += item.price * item.qty);
+    const user = JSON.parse(localStorage.getItem("user")) || {};
 
     try {
 
         const res = await fetch("/api/create-order", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ amount: total })
+            body: JSON.stringify({ amount: zxCartTotal() })
         });
 
         const data = await res.json();
@@ -1391,13 +1657,13 @@ async function payNow() {
 
             handler: function (response) {
                 // response me razorpay_order_id, razorpay_payment_id, razorpay_signature hote hain
-                zxPlaceOrder(response);
+                zxPlaceOrder(response, payload);
             },
 
             prefill: {
-                name: name,
-                email: "",
-                contact: phone
+                name: user.name || "",
+                email: user.email || "",
+                contact: user.mobile || ""
             },
 
             theme: {
@@ -1415,47 +1681,208 @@ async function payNow() {
 }
 
 
-/* ================= 12. SIDEBAR + MY ORDERS ================= */
+/* ================= 12. ACCOUNT PANEL =================
+   Profile photo par click -> right side panel khulta hai.
+   Usme: Profile Information, My Orders, Saved Addresses, Notifications (sab usi panel ke andar)
+   ===================================================== */
 
-// ☰ menu (left sidebar) kholta / band karta hai aur upar naam-email bharta hai
-function toggleSidebar() {
+let accView = "menu";
+let myOrdersCache = [];
 
-    document.getElementById("sidebar").classList.toggle("active");
+// Account panel kholta hai (view = "menu", "profile", "orders", "addresses", "notifications")
+function openAccountPanel(view) {
 
-    const user = JSON.parse(localStorage.getItem("user"));
-
-    if (user) {
-        document.getElementById("sideName").innerText = user.name;
-        document.getElementById("sideEmail").innerText = user.email;
-    }
-}
-
-// Sidebar ke options: Admin Panel, My Profile, My Orders, Saved Address, Payment Methods
-function openSection(type) {
-
-    document.getElementById("sidebar").classList.remove("active");
-
-    if (type === "orders") {
-        hideAllPages();
-        document.getElementById("ordersSection").style.display = "block";
-        loadMyOrders();
+    if (!getAuthToken()) {
+        authShowLogin();
         return;
     }
 
-    if (type === "admin") {
+    document.getElementById("accountPanel").classList.add("active");
+    document.getElementById("accountOverlay").classList.add("active");
+
+    showAccountView(typeof view === "string" ? view : "menu");
+
+}
+
+// Account panel band karta hai
+function closeAccountPanel() {
+
+    const panel = document.getElementById("accountPanel");
+    const overlay = document.getElementById("accountOverlay");
+    const imgOptions = document.getElementById("imgOptions");
+
+    if (panel) panel.classList.remove("active");
+    if (overlay) overlay.classList.remove("active");
+    if (imgOptions) imgOptions.classList.remove("active");
+
+}
+
+// Panel ke andar ek screen dikhata hai (menu / profile / orders / orderDetail / addresses / notifications)
+function showAccountView(name, arg) {
+
+    accView = name;
+
+    const body = document.getElementById("accBody");
+    if (!body) return;
+
+    body.scrollTop = 0;
+
+    if (name === "profile") return renderAccountProfile(body);
+    if (name === "orders") return renderAccountOrders(body);
+    if (name === "orderDetail") return renderAccountOrderDetail(body, arg);
+    if (name === "addresses") return renderAccountAddresses(body);
+    if (name === "notifications") return renderAccountNotifications(body);
+
+    renderAccountMenu(body);
+
+}
+
+// Menu me kisi option par click: Admin Panel alag page hai, baaki panel ke andar khulte hain
+function accGo(view) {
+
+    if (view === "admin") {
+        closeAccountPanel();
         openAdminPanel();
         return;
     }
 
-    // Profile panel me user ka saved address bhi dikhta hai
-    if (type === "profile" || type === "address") {
-        toggleProfile();
+    showAccountView(view);
+
+}
+
+// Sub-screen ka upar wala "← Back" header
+function accSubHead(title) {
+
+    return `
+    <div class="acct-sub">
+        <button onclick="showAccountView('menu')" aria-label="Back">←</button>
+        <h4>${escapeHTML(title)}</h4>
+    </div>`;
+
+}
+
+// Panel ka main menu
+function renderAccountMenu(body) {
+
+    const admin = isAdminUser();
+    const notifCount = getNotificationList().length;
+
+    const items = admin
+        ? [
+            ["👤", "Profile Information", "Your account details", "profile", 0],
+            ["🛠️", "Admin Panel", "Customers and orders", "admin", 0]
+        ]
+        : [
+            ["👤", "Profile Information", "Your account details", "profile", 0],
+            ["📦", "My Orders", "Track and view your orders", "orders", 0],
+            ["📍", "Saved Addresses", "Manage delivery addresses", "addresses", 0],
+            ["🔔", "Notifications", "Updates and offers", "notifications", notifCount]
+        ];
+
+    body.innerHTML = `
+    <div class="acct-menu">
+        ${items.map(it => `
+            <button class="acct-item" onclick="accGo('${it[3]}')">
+                <span class="acct-item-icon">${it[0]}</span>
+                <span class="acct-item-text">
+                    <b>${it[1]}</b>
+                    <small>${it[2]}</small>
+                </span>
+                ${it[4] ? `<span class="acct-count">${it[4]}</span>` : ""}
+                <span class="acct-arrow">›</span>
+            </button>
+        `).join("")}
+    </div>
+
+    <button class="acct-logout" onclick="logoutUser()">🚪 Logout</button>`;
+
+}
+
+// Profile Information: login wale user ki saari details (server se)
+async function renderAccountProfile(body) {
+
+    body.innerHTML = accSubHead("Profile Information") + `<p class="acct-muted">Loading...</p>`;
+
+    const data = await authFetch("/api/auth/me");
+    if (accView !== "profile") return;
+
+    if (!data || !data.success) {
+        body.innerHTML = accSubHead("Profile Information") + `<p class="acct-muted">${escapeHTML(data?.message || "Could not load profile")}</p>`;
         return;
     }
 
-    if (type === "payment") {
-        alert("Payment Methods feature coming soon");
+    const p = data.profile;
+
+    const rows = p.role === "admin"
+        ? [["Name", p.name], ["Email", p.email], ["Role", "Administrator"]]
+        : [
+            ["Full Name", p.name],
+            ["Email", p.email],
+            ["Mobile Number", p.mobile],
+            ["Address", p.address],
+            ["District", p.district],
+            ["State", p.state],
+            ["Pin Code", p.pincode]
+        ];
+
+    body.innerHTML = accSubHead("Profile Information") + `
+        <div class="acct-info">
+            ${rows.map(r => `
+                <div class="acct-info-row">
+                    <span>${r[0]}</span>
+                    <b>${escapeHTML(r[1] || "-")}</b>
+                </div>
+            `).join("")}
+        </div>`;
+
+}
+
+// My Orders: customer ke saare orders ki list (server se)
+async function renderAccountOrders(body) {
+
+    body.innerHTML = accSubHead("My Orders") + `<p class="acct-muted">Loading...</p>`;
+
+    const data = await authFetch("/api/auth/my-orders");
+    if (accView !== "orders") return;
+
+    if (!data || !data.success) {
+        body.innerHTML = accSubHead("My Orders") + `<p class="acct-muted">${escapeHTML(data?.message || "Could not load orders")}</p>`;
+        return;
     }
+
+    myOrdersCache = data.orders || [];
+
+    if (myOrdersCache.length === 0) {
+        body.innerHTML = accSubHead("My Orders") + `
+            <div class="acct-empty">
+                <div>📦</div>
+                <p>No orders yet</p>
+                <button class="acct-btn" onclick="closeAccountPanel();showSection('order')">Start Shopping</button>
+            </div>`;
+        return;
+    }
+
+    const placeholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23dfe6ee'/></svg>";
+
+    body.innerHTML = accSubHead("My Orders") + myOrdersCache.map((o, i) => {
+
+        const first = Array.isArray(o.items) ? o.items[0] : null;
+        const img = (first && first.img) || placeholder;
+        const date = getOrderTime(o).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+        return `
+        <div class="acct-order" onclick="showAccountView('orderDetail', ${i})">
+            <img src="${escapeHTML(img)}" alt="">
+            <div class="acct-order-info">
+                <b>Order #${escapeHTML(o.id)}</b>
+                <span>₹${escapeHTML(o.totalAmount)} • ${o.items.length} item${o.items.length > 1 ? "s" : ""}</span>
+                <small>${date}</small>
+            </div>
+            <em class="acct-status">${escapeHTML(o.status)}</em>
+        </div>`;
+
+    }).join("");
+
 }
 
 // Order ki date ko sahi Date me badalta hai
@@ -1466,139 +1893,189 @@ function getOrderTime(order) {
 
 }
 
-// Server se laaye gaye orders yahan rakhe jate hain (order par click karne par detail ke liye)
-let myOrdersCache = [];
+// Ek order ki detail: items, address, payment aur tracking (Placed -> Dispatched -> Out -> Delivered)
+function renderAccountOrderDetail(body, index) {
 
-// "My Orders" list banata hai: logged-in customer ke orders server (orders table) se aate hain
-async function loadMyOrders() {
+    const o = myOrdersCache[index];
 
-    const box = document.getElementById("myOrdersList");
-    const token = getAuthToken();
-
-    if (!token) {
-        box.innerHTML = "<p>Please login to see your orders</p>";
+    if (!o) {
+        showAccountView("orders");
         return;
     }
 
-    box.innerHTML = "<p>Loading...</p>";
-
-    try {
-
-        const res = await fetch("/api/auth/my-orders", {
-            headers: { Authorization: "Bearer " + token }
-        });
-
-        if (res.status === 401) {
-            alert("Session expired. Please login again.");
-            logoutUser();
-            return;
-        }
-
-        const data = await res.json();
-        myOrdersCache = data.orders || [];
-
-    } catch (err) {
-        console.log("My orders error:", err);
-        box.innerHTML = "<p>Server error. Please try again.</p>";
-        return;
-    }
-
-    if (myOrdersCache.length === 0) {
-        box.innerHTML = "<p>No Orders Found</p>";
-        return;
-    }
-
-    const placeholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23dfe6ee'/></svg>";
-
-    box.innerHTML = myOrdersCache.map((order, index) => {
-
-        const firstItem = order.items[0];
-        const img = (firstItem && firstItem.img) || placeholder;
-
-        const deliveryDate = getOrderTime(order);
-        deliveryDate.setDate(deliveryDate.getDate() + 5);
-
-        return `
-        <div class="order-row" onclick="openOrderDetail(${index})">
-
-            <img src="${escapeHTML(img)}" class="order-img">
-
-            <div class="order-info">
-                <h3>Order #${order.id}</h3>
-                <p>₹${order.totalAmount} • ${order.items.length} items</p>
-                <span class="delivery">Delivery by: ${deliveryDate.toDateString()}</span>
-            </div>
-
-            <div class="order-status">📦 ${escapeHTML(order.status)}</div>
-
-        </div>
-        `;
-
-    }).join("");
-}
-
-// Ek order par click karne par uski items aur tracking (Placed -> Dispatched -> Out -> Delivered) dikhata hai
-function openOrderDetail(index) {
-
-    const order = myOrdersCache[index];
-    if (!order) return;
-
-    const box = document.getElementById("myOrdersList");
-
-    const itemsHTML = order.items.map(i =>
-        `<p>${escapeHTML(i.name)} × ${i.qty} = ₹${i.price * i.qty}</p>`
-    ).join("");
-
-    const days = Math.floor((Date.now() - getOrderTime(order)) / (1000 * 60 * 60 * 24));
+    const days = Math.floor((Date.now() - getOrderTime(o)) / (1000 * 60 * 60 * 24));
 
     let status = "Order Placed";
     let progress = 25;
 
-    if (days >= 1) {
-        status = "Dispatched 🚚";
-        progress = 50;
-    }
-    if (days >= 3) {
-        status = "Out for Delivery 🚴";
-        progress = 75;
-    }
-    if (days >= 5) {
-        status = "Delivered ✅";
-        progress = 100;
-    }
+    if (days >= 1) { status = "Dispatched 🚚"; progress = 50; }
+    if (days >= 3) { status = "Out for Delivery 🚴"; progress = 75; }
+    if (days >= 5) { status = "Delivered ✅"; progress = 100; }
 
-    box.innerHTML = `
-        <h2>📦 Order #${order.id}</h2>
+    const items = o.items.map(i => `
+        <div class="acct-line">
+            <span>${escapeHTML(i.name)} × ${i.qty}</span>
+            <b>₹${i.price * i.qty}</b>
+        </div>`).join("");
 
-        ${itemsHTML}
+    body.innerHTML = `
+    <div class="acct-sub">
+        <button onclick="showAccountView('orders')" aria-label="Back">←</button>
+        <h4>Order #${escapeHTML(o.id)}</h4>
+    </div>
 
-        <p><b>Total:</b> ₹${order.totalAmount} (${order.paymentMethod === "online" ? "Paid online" : "Cash on Delivery"})</p>
-        <p><b>Address:</b> ${escapeHTML(order.address)}</p>
+    <div class="acct-box">
+        ${items}
+        <div class="acct-line acct-line-total"><span>Total</span><b>₹${escapeHTML(o.totalAmount)}</b></div>
+    </div>
 
+    <div class="acct-box">
+        <div class="acct-box-title">Delivery address</div>
+        <p>${escapeHTML(o.customerName)} · ${escapeHTML(o.phone)}</p>
+        <p class="acct-muted">${escapeHTML(o.address)}</p>
+    </div>
+
+    <div class="acct-box">
+        <div class="acct-box-title">Payment</div>
+        <p>${o.paymentMethod === "online" ? "Paid online (" + escapeHTML(o.paymentStatus) + ")" : "Cash on Delivery"}</p>
+    </div>
+
+    <div class="acct-box">
         <div class="tracker">
-
-            <div class="step ${progress >= 25 ? 'active' : ''}">Placed</div>
-            <div class="step ${progress >= 50 ? 'active' : ''}">Dispatched</div>
-            <div class="step ${progress >= 75 ? 'active' : ''}">Out</div>
-            <div class="step ${progress >= 100 ? 'active' : ''}">Delivered</div>
+            <div class="step ${progress >= 25 ? "active" : ""}">Placed</div>
+            <div class="step ${progress >= 50 ? "active" : ""}">Dispatched</div>
+            <div class="step ${progress >= 75 ? "active" : ""}">Out</div>
+            <div class="step ${progress >= 100 ? "active" : ""}">Delivered</div>
 
             <div class="line">
                 <div class="line-progress" style="width:${progress}%"></div>
             </div>
-
         </div>
-
         <p class="status-text">${status}</p>
+    </div>`;
 
-        <button id="LastOrder" onclick="loadMyOrders()">⬅ Back</button>
-        `;
 }
 
-// "My Orders" band karke Home page wapas dikhata hai
-function closeOrders() {
+// Saved Addresses: addresses ki list + naya address jodne ka form
+async function renderAccountAddresses(body) {
 
-    hideAllPages();
-    document.getElementById("home-wrapper").style.display = "block";
+    body.innerHTML = accSubHead("Saved Addresses") + `<p class="acct-muted">Loading...</p>`;
+
+    await loadAddresses();
+    if (accView !== "addresses") return;
+
+    const user = JSON.parse(localStorage.getItem("user")) || {};
+
+    const cards = myAddresses.map(a => `
+        <div class="acct-addr">
+            <div class="acct-addr-top">
+                <span class="acct-tag">${escapeHTML(a.label || "Home")}</span>
+                ${a.isDefault ? '<span class="acct-tag acct-tag-def">Default</span>' : ""}
+            </div>
+            <b>${escapeHTML(a.fullName)}</b> <span class="acct-muted">· ${escapeHTML(a.phone)}</span>
+            <p>${formatAddressLine(a)}</p>
+            <div class="acct-addr-actions">
+                ${a.isDefault ? "" : `<button onclick="accSetDefault(${a.id})">Set as default</button>`}
+                <button class="danger" onclick="accDeleteAddress(${a.id})">Delete</button>
+            </div>
+        </div>`).join("");
+
+    body.innerHTML = accSubHead("Saved Addresses") + (cards || `<p class="acct-muted">No saved address yet</p>`) + `
+        <button class="acct-btn-outline" onclick="accToggleAddrForm()">＋ Add New Address</button>
+
+        <div id="accAddrForm" class="acct-form" style="display:none;">
+            ${addressFormHTML("accNew", { name: user.name, phone: user.mobile })}
+            <label class="co-check">
+                <input type="checkbox" id="accNewDefault"> Make this my default address
+            </label>
+            <button class="acct-btn" onclick="accSaveAddress()">Save Address</button>
+        </div>`;
+
+}
+
+// "+ Add New Address" par form kholta / band karta hai
+function accToggleAddrForm() {
+
+    const f = document.getElementById("accAddrForm");
+    if (f) f.style.display = f.style.display === "none" ? "block" : "none";
+
+}
+
+// Naya address server me save karta hai
+async function accSaveAddress() {
+
+    const a = readAddressForm("accNew");
+    if (!a) return;
+
+    a.isDefault = !!document.getElementById("accNewDefault")?.checked;
+
+    const data = await authFetch("/api/auth/addresses", {
+        method: "POST",
+        body: JSON.stringify(a)
+    });
+
+    if (!data) return;
+
+    if (!data.success) {
+        alert(data.message || "Could not save address");
+        return;
+    }
+
+    zxShowToast("✅ Address saved");
+    showAccountView("addresses");
+
+}
+
+// Kisi address ko default banata hai
+async function accSetDefault(id) {
+
+    const data = await authFetch("/api/auth/addresses/" + id + "/default", { method: "PUT" });
+    if (!data) return;
+
+    if (!data.success) {
+        alert(data.message || "Could not update");
+        return;
+    }
+
+    showAccountView("addresses");
+
+}
+
+// Address delete karta hai
+async function accDeleteAddress(id) {
+
+    if (!confirm("Delete this address?")) return;
+
+    const data = await authFetch("/api/auth/addresses/" + id, { method: "DELETE" });
+    if (!data) return;
+
+    if (!data.success) {
+        alert(data.message || "Could not delete");
+        return;
+    }
+
+    showAccountView("addresses");
+
+}
+
+// Notifications: Notification.js ki list, click karne par message khulta hai
+function renderAccountNotifications(body) {
+
+    const list = getNotificationList();
+
+    if (!list.length) {
+        body.innerHTML = accSubHead("Notifications") + `<p class="acct-muted">No notifications</p>`;
+        return;
+    }
+
+    body.innerHTML = accSubHead("Notifications") + list.map(n => `
+        <div class="acct-notif" onclick="this.classList.toggle('open')">
+            <div class="acct-notif-top">
+                <b>${escapeHTML(n.title)}</b>
+                <span>${escapeHTML(n.date)}</span>
+            </div>
+            <p>${escapeHTML(n.message)}</p>
+        </div>`).join("");
 
 }
 
@@ -1610,19 +2087,6 @@ let adminCustomersCache = [];
 // Admin login ke baad mila token (har admin request ke saath server ko bhejna padta hai)
 function getAdminToken() {
     return localStorage.getItem("adminToken");
-}
-
-// Text ko HTML me safe banata hai, taaki customer ka likha naam/address page ko na tode (XSS se bachav)
-function escapeHTML(value) {
-
-    return String(value ?? "").replace(/[&<>"']/g, ch => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    }[ch]));
-
 }
 
 // Admin Panel kholta hai (sirf admin ke liye) aur customers + orders ki list DB se mangwata hai
@@ -1914,3 +2378,18 @@ function closeLoginPopup() { authHideAll(); }
 function openCustomerForm() { authShowRegister(); }
 function closeCustomerForm() { authHideAll(); }
 function switchToLogin() { authShowLogin(); }
+function toggleProfile() { openAccountPanel(); }
+function closeProfile() { closeAccountPanel(); }
+function toggleNotifications() { openAccountPanel("notifications"); }
+
+// Purane sidebar ke options (ab sab account panel me khulte hain)
+function openSection(type) {
+
+    if (type === "admin") { openAdminPanel(); return; }
+    if (type === "orders") { openAccountPanel("orders"); return; }
+    if (type === "address") { openAccountPanel("addresses"); return; }
+    if (type === "payment") { alert("Payment Methods feature coming soon"); return; }
+
+    openAccountPanel("profile");
+
+}

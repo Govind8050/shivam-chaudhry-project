@@ -11,6 +11,7 @@ const authRoutes = require("./routes/authRoutes");
 require("./models/Customer");
 require("./models/Admin");
 require("./models/Order");
+require("./models/Address");
 const seedAdmin = require("./models/seedAdmin");
 
 const app = express();

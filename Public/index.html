@@ -13,7 +13,7 @@
 
 <body>
 
-    <!-- 01. NAVBAR: logo, page links, single Login button, notification bell, profile icon, menu button, sidebar -->
+    <!-- 01. NAVBAR: logo, page links, Login button, profile photo (click par account panel khulta hai) -->
     <header>
         <div class="name">
             <div class="loader"></div>
@@ -26,89 +26,67 @@
             <a class="login-btn" href="#" onclick="showSection('order')">Order</a>
             <a class="login-btn" href="#" onclick="showSection('address')">Address</a>
 
-            <div id="notificationIcon" style="display: none;" onclick="toggleNotifications()">
-                🔔 <span id="notifCount">0</span>
-            </div>
-
             <div class="dropdown">
                 <button id="loginBtn" class="login-btn" onclick="authShowLogin()">Login</button>
             </div>
 
             <div id="profileArea" style="display:none;">
-                <img src="https://i.imgur.com/6VBx3io.png" class="profile-icon" alt="Profile" onclick="toggleProfile();showImgOptions();">
-            </div>
-
-            <div id="menuBtn" onclick="toggleSidebar()">☰</div>
-
-            <div id="sidebar" class="sidebar">
-                <div class="sidebar-header">
-                    <h3 id="sideName">User Name</h3>
-                    <p id="sideEmail">email@gmail.com</p>
+                <div class="profile-wrap" onclick="openAccountPanel()" title="My Account">
+                    <img src="https://i.imgur.com/6VBx3io.png" class="profile-icon" alt="Profile">
+                    <span id="profileBadge" class="profile-badge">0</span>
                 </div>
-                <ul>
-                    <li onclick="openSection('profile')">👤 My Profile</li>
-                    <li onclick="openSection('orders')">📦 My Orders</li>
-                    <li onclick="openSection('address')">📍 Saved Address</li>
-                    <li onclick="openSection('payment')">💳 Payment Methods</li>
-                    <li onclick="logoutUser()">🚪 Logout</li>
-                </ul>
             </div>
         </nav>
     </header>
 
-    <!-- 02. MY ORDERS: logged-in user ke orders ki list (JS se fill hoti hai) -->
-    <section id="ordersSection" class="page-section" style="display:none;">
-        <h2>My Orders</h2>
-        <button class="close-orders" onclick="closeOrders()">❌</button>
-        <div id="myOrdersList"></div>
-    </section>
     <!-- ADMIN PANEL: sirf admin login par dikhta hai -->
-<section id="adminPanel" class="page-section" style="display:none;">
+    <section id="adminPanel" class="page-section" style="display:none;">
 
-    <div class="admin-top">
-        <h2>🛠️ Admin Panel</h2>
-        <button class="admin-back-btn" onclick="closeAdminPanel()">⬅ Back to Website</button>
-    </div>
+        <div class="admin-top">
+            <h2>🛠️ Admin Panel</h2>
+            <button class="admin-back-btn" onclick="closeAdminPanel()">⬅ Back to Website</button>
+        </div>
 
-    <div class="admin-stats">
-        <div class="admin-stat"><span>Total Customers</span><b id="adminTotalCustomers">0</b></div>
-        <div class="admin-stat"><span>States</span><b id="adminTotalStates">0</b></div>
-        <div class="admin-stat"><span>Latest Customer</span><b id="adminLatestCustomer">-</b></div>
-    </div>
+        <div class="admin-stats">
+            <div class="admin-stat"><span>Total Customers</span><b id="adminTotalCustomers">0</b></div>
+            <div class="admin-stat"><span>States</span><b id="adminTotalStates">0</b></div>
+            <div class="admin-stat"><span>Latest Customer</span><b id="adminLatestCustomer">-</b></div>
+        </div>
 
-    <input type="text" id="adminSearch" class="admin-search"
-           placeholder="Search name, email, mobile, district, state, pin..."
-           oninput="filterAdminCustomers()">
+        <input type="text" id="adminSearch" class="admin-search"
+               placeholder="Search name, email, mobile, district, state, pin..."
+               oninput="filterAdminCustomers()">
 
-    <p id="adminCount" class="admin-count"></p>
+        <p id="adminCount" class="admin-count"></p>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th><th>Name</th><th>Email</th><th>Mobile</th>
-                    <th>Address</th><th>District</th><th>State</th><th>Pin</th>
-                </tr>
-            </thead>
-            <tbody id="adminCustomerRows"></tbody>
-        </table>
-    </div>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Name</th><th>Email</th><th>Mobile</th>
+                        <th>Address</th><th>District</th><th>State</th><th>Pin</th>
+                    </tr>
+                </thead>
+                <tbody id="adminCustomerRows"></tbody>
+            </table>
+        </div>
 
-    <p id="adminEmpty" class="admin-empty"></p>
+        <p id="adminEmpty" class="admin-empty"></p>
+
         <h3 style="margin:30px 0 10px;">📦 Orders</h3>
 
-    <div class="admin-table-wrap">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>ID</th><th>Customer</th><th>Phone</th><th>Address</th>
-                    <th>Items</th><th>Total</th><th>Payment</th><th>Date</th>
-                </tr>
-            </thead>
-            <tbody id="adminOrderRows"></tbody>
-        </table>
-    </div>
-</section>
+        <div class="admin-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Customer</th><th>Phone</th><th>Address</th>
+                        <th>Items</th><th>Total</th><th>Payment</th><th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="adminOrderRows"></tbody>
+            </table>
+        </div>
+    </section>
 
     <!-- 03. HOME PAGE WRAPPER: Hero + Featured + Products + Video + Why Us + Stats + Trust + Testimonials + CTA + Features -->
     <div id="home-wrapper">
@@ -796,7 +774,7 @@
             <span class="contact-label">OUR LOCATION</span>
             <h3>Find Our Company</h3>
 
-            
+
             <div class="contact-map-placeholder">
                 <iframe
                     src="https://www.google.com/maps/embed?origin=mfe&pb=!1m3!2m1!1sKanthudih,+Bihar,+India!6i13"
@@ -957,27 +935,34 @@
         </div>
     </div>
 
-    <!-- 11. PROFILE PANEL: right side se khulne wala user profile (camera / gallery option ke saath) -->
-    <div id="profilePanel" class="profile-panel">
-        <div class="profile-header">
-            <img src="https://i.imgur.com/6VBx3io.png" class="profile-big" alt="Profile">
-            <div id="imgOptions" class="img-options">
-                <button onclick="openCamera()">📷 Open Camera</button>
-                <button onclick="openGallery()">🖼️ Open Gallery</button>
+    <!-- 11. ACCOUNT PANEL: profile photo par click karne par right side se khulta hai
+         (Profile Information, My Orders, Saved Addresses, Notifications sab isi ke andar) -->
+    <div id="accountOverlay" class="acct-overlay" onclick="closeAccountPanel()"></div>
+
+    <aside id="accountPanel" class="acct-panel">
+
+        <div class="acct-head">
+            <button class="acct-close" onclick="closeAccountPanel()" aria-label="Close">✖</button>
+
+            <div class="acct-avatar-wrap">
+                <img src="https://i.imgur.com/6VBx3io.png" class="profile-big" alt="Profile" title="Click to change photo">
+
+                <div id="imgOptions" class="img-options">
+                    <button onclick="openCamera()">📷 Open Camera</button>
+                    <button onclick="openGallery()">🖼️ Open Gallery</button>
+                </div>
             </div>
-            <h3 id="pName"></h3>
+
+            <div class="acct-id">
+                <h3 id="accName"></h3>
+                <p id="accEmail"></p>
+                <span id="accRole" class="acct-role">Customer</span>
+            </div>
         </div>
 
-        <div class="profile-info">
-            <p><b>Email :</b> <span id="pEmail"></span></p>
-            <p><b>Mobile Number :</b> <span id="pUsername"></span></p>
-            <p><b>Address:</b> <span id="pAddress"></span></p>
-        </div>
+        <div id="accBody" class="acct-body"></div>
 
-        <button onclick="logoutUser()" class="logout-btn">Logout</button>
-    </div>
-
-    <div id="profileOverlay" class="profile-overlay" onclick="closeProfile()"></div>
+    </aside>
 
     <!-- 12. REGISTER FORM: Login popup ke Register button se khulta hai -->
     <div class="customer-login-container" id="customerLoginForm" style="display: none;">
@@ -1030,22 +1015,14 @@
         </form>
     </div>
 
-    <!-- 13. NOTIFICATION PANEL: orders ki notification list -->
-    <div id="notificationPanel" class="notif-panel">
-        <div class="notif-header">
-            <h2>📦 Orders</h2>
-            <span class="closeNotif" onclick="toggleNotifications()">✖</span>
-        </div>
-        <div id="notifList"></div>
-    </div>
-
     <!-- 14. ORDER SUCCESS POPUP: order place hone par green tick -->
     <div id="successPopup" class="success-popup">
         <div class="popup-box">
             <div class="checkmark">✔</div>
             <h2>Order Placed Successfully!</h2>
-            <p>Your order has been confirmed 🎉</p>
-            <button onclick="closeSuccessPopup()">Continue Shopping</button>
+            <p id="successMsg">Your order has been confirmed 🎉</p>
+            <button onclick="viewOrdersFromPopup()">View My Orders</button>
+            <button onclick="closeSuccessPopup()" style="background:#0d6efd;margin-left:8px;">Continue Shopping</button>
         </div>
     </div>
 

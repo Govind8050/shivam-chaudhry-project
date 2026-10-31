@@ -1,10 +1,15 @@
+// controllers/authController.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const Customer = require("../models/Customer");
 const Admin = require("../models/Admin");
 const Order = require("../models/Order");
+const Address = require("../models/Address");
 const User = require("../models/User");
+const { sendOrderEmails } = require("../utils/mailer");
+
+/* ================= HELPERS ================= */
 
 function isBcryptHash(str) {
   return typeof str === "string" && /^\$2[aby]\$/.test(str);
@@ -12,6 +17,33 @@ function isBcryptHash(str) {
 
 function signToken(payload, expires) {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: expires });
+}
+
+// Address ko ek line ke text me badalta hai (orders table me yahi save hota hai)
+function formatAddress(a) {
+  const main = [a.line, a.district, a.state].filter(Boolean).join(", ");
+  return a.pincode ? main + " - " + a.pincode : main;
+}
+
+// Address form ka data check karke saaf karta hai. Galat ho to null deta hai
+function cleanAddress(a) {
+  if (!a) return null;
+
+  const x = {
+    label: String(a.label || "Home").trim().slice(0, 30) || "Home",
+    fullName: String(a.fullName || "").trim(),
+    phone: String(a.phone || "").trim(),
+    line: String(a.line || "").trim(),
+    district: String(a.district || "").trim(),
+    state: String(a.state || "").trim(),
+    pincode: String(a.pincode || "").trim()
+  };
+
+  if (!x.fullName || !x.phone || !x.line || !x.district || !x.state || !x.pincode) return null;
+  if (x.phone.replace(/\D/g, "").length < 10) return null;
+  if (!/^\d{6}$/.test(x.pincode)) return null;
+
+  return x;
 }
 
 /* ================= REGISTER (customers table) ================= */
@@ -154,6 +186,14 @@ exports.requireUser = (req, res, next) => {
   }
 };
 
+// Sirf customer (requireUser ke baad lagta hai)
+exports.requireCustomer = (req, res, next) => {
+  if (!req.user || req.user.role !== "customer") {
+    return res.status(403).json({ success: false, message: "Only customers can do this" });
+  }
+  next();
+};
+
 // Sirf admin
 exports.requireAdmin = (req, res, next) => {
   try {
@@ -172,26 +212,192 @@ exports.requireAdmin = (req, res, next) => {
   }
 };
 
+/* ================= PROFILE (Profile Information) ================= */
+
+exports.getMe = async (req, res) => {
+  try {
+    if (req.user.role === "admin") {
+      return res.json({ success: true, profile: { name: "Admin", email: req.user.email, role: "admin" } });
+    }
+
+    const c = await Customer.findByPk(req.user.id, {
+      attributes: ["id", "name", "email", "mobile", "address", "district", "state", "pincode"]
+    });
+
+    if (!c) {
+      return res.status(404).json({ success: false, message: "Account not found" });
+    }
+
+    res.json({ success: true, profile: { ...c.toJSON(), role: "customer" } });
+
+  } catch (err) {
+    console.log("Get me error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+/* ================= SAVED ADDRESSES (addresses table) ================= */
+
+async function listAddresses(customerId) {
+  return Address.findAll({
+    where: { customerId },
+    order: [["isDefault", "DESC"], ["id", "ASC"]]
+  });
+}
+
+// Customer ke saare saved addresses. Pehli baar registration wala address apne aap default ban jata hai
+exports.getAddresses = async (req, res) => {
+  try {
+    let list = await listAddresses(req.user.id);
+
+    if (list.length === 0) {
+      const c = await Customer.findByPk(req.user.id);
+
+      if (c && c.address) {
+        await Address.create({
+          customerId: c.id,
+          label: "Home",
+          fullName: c.name,
+          phone: c.mobile,
+          line: c.address,
+          district: c.district || "",
+          state: c.state || "",
+          pincode: c.pincode || "",
+          isDefault: true
+        });
+
+        list = await listAddresses(req.user.id);
+      }
+    }
+
+    res.json({ success: true, addresses: list });
+
+  } catch (err) {
+    console.log("Get addresses error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.addAddress = async (req, res) => {
+  try {
+    const clean = cleanAddress(req.body);
+
+    if (!clean) {
+      return res.status(400).json({
+        success: false,
+        message: "Please fill all address fields correctly (10 digit mobile, 6 digit pin code)"
+      });
+    }
+
+    const count = await Address.count({ where: { customerId: req.user.id } });
+    const makeDefault = count === 0 || req.body.isDefault === true;
+
+    if (makeDefault) {
+      await Address.update({ isDefault: false }, { where: { customerId: req.user.id } });
+    }
+
+    const created = await Address.create({
+      customerId: req.user.id,
+      ...clean,
+      isDefault: makeDefault
+    });
+
+    res.json({ success: true, message: "Address saved", address: created });
+
+  } catch (err) {
+    console.log("Add address error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.setDefaultAddress = async (req, res) => {
+  try {
+    const addr = await Address.findOne({ where: { id: req.params.id, customerId: req.user.id } });
+
+    if (!addr) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
+
+    await Address.update({ isDefault: false }, { where: { customerId: req.user.id } });
+    addr.isDefault = true;
+    await addr.save();
+
+    res.json({ success: true, message: "Default address updated" });
+
+  } catch (err) {
+    console.log("Default address error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.deleteAddress = async (req, res) => {
+  try {
+    const addr = await Address.findOne({ where: { id: req.params.id, customerId: req.user.id } });
+
+    if (!addr) {
+      return res.status(404).json({ success: false, message: "Address not found" });
+    }
+
+    const wasDefault = !!addr.isDefault;
+    await addr.destroy();
+
+    // Default wala address hata to koi doosra default bana do
+    if (wasDefault) {
+      const next = await Address.findOne({ where: { customerId: req.user.id }, order: [["id", "ASC"]] });
+      if (next) {
+        next.isDefault = true;
+        await next.save();
+      }
+    }
+
+    res.json({ success: true, message: "Address deleted" });
+
+  } catch (err) {
+    console.log("Delete address error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 /* ================= ORDERS (orders table) ================= */
 
-// Customer order place karta hai
+// Customer order place karta hai. Saved address (addressId) ya naya address (address) bhej sakta hai
 exports.placeOrder = async (req, res) => {
   try {
-    if (req.user.role !== "customer") {
-      return res.status(403).json({ success: false, message: "Only customers can place orders" });
-    }
-
-    const { items, name, phone, address, paymentMethod, razorpay } = req.body;
-
-    if (!name || !phone || !address) {
-      return res.status(400).json({ success: false, message: "Name, phone and address are required" });
-    }
+    const { items, addressId, address, saveAddress, paymentMethod, razorpay } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Cart is empty" });
     }
 
-    // Sirf zaroori fields rakhte hain aur total server par nikalte hain
+    /* ---- delivery address ---- */
+    let addr;
+
+    if (addressId) {
+      addr = await Address.findOne({ where: { id: addressId, customerId: req.user.id } });
+
+      if (!addr) {
+        return res.status(400).json({ success: false, message: "Selected address not found" });
+      }
+
+    } else {
+      const clean = cleanAddress(address);
+
+      if (!clean) {
+        return res.status(400).json({
+          success: false,
+          message: "Please fill the delivery address correctly (10 digit mobile, 6 digit pin code)"
+        });
+      }
+
+      if (saveAddress) {
+        const count = await Address.count({ where: { customerId: req.user.id } });
+        addr = await Address.create({ customerId: req.user.id, ...clean, isDefault: count === 0 });
+      } else {
+        addr = clean;
+      }
+    }
+
+    /* ---- items aur total (server par nikalte hain) ---- */
     const cleanItems = items.map(i => ({
       id: i.id,
       name: String(i.name || ""),
@@ -202,6 +408,7 @@ exports.placeOrder = async (req, res) => {
 
     const total = cleanItems.reduce((sum, i) => sum + i.price * i.qty, 0);
 
+    /* ---- payment ---- */
     const method = paymentMethod === "online" ? "online" : "cod";
     let paymentStatus = "pending";
     let rzpOrderId = null;
@@ -234,12 +441,13 @@ exports.placeOrder = async (req, res) => {
       rzpPaymentId = razorpay_payment_id;
     }
 
+    /* ---- save ---- */
     const order = await Order.create({
       customerId: req.user.id,
       customerEmail: req.user.email,
-      customerName: String(name).trim(),
-      phone: String(phone).trim(),
-      address: String(address).trim(),
+      customerName: addr.fullName,
+      phone: addr.phone,
+      address: formatAddress(addr),
       items: cleanItems,
       totalAmount: total,
       paymentMethod: method,
@@ -248,7 +456,11 @@ exports.placeOrder = async (req, res) => {
       razorpayPaymentId: rzpPaymentId
     });
 
-    res.json({ success: true, message: "Order placed", orderId: order.id });
+    // Customer aur admin ko mail (background me, order ko rokta nahi)
+    sendOrderEmails(order.toJSON(), req.user.email)
+      .catch(err => console.log("❌ Order email error:", err && err.message ? err.message : err));
+
+    res.json({ success: true, message: "Order placed", orderId: order.id, emailTo: req.user.email });
 
   } catch (err) {
     console.log("Place order error:", err);
