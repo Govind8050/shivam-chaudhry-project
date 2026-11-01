@@ -19,11 +19,13 @@ router.delete("/addresses/:id", c.requireUser, c.requireCustomer, c.deleteAddres
 /* ORDERS (customer) */
 router.post("/orders", c.requireUser, c.requireCustomer, c.placeOrder);
 router.get("/my-orders", c.requireUser, c.requireCustomer, c.getMyOrders);
+router.post("/orders/:id/cancel", c.requireUser, c.requireCustomer, c.cancelMyOrder);
 
 /* ADMIN (admin token zaroori) */
 router.get("/admin/customers", c.requireAdmin, c.getAllCustomers);
 router.get("/admin/orders", c.requireAdmin, c.getAllOrders);
 router.patch("/admin/orders/:id/status", c.requireAdmin, c.updateOrderStatus);
+router.post("/admin/orders/:id/cancel", c.requireAdmin, c.adminCancelOrder);
 router.get("/login-stats", c.requireAdmin, c.getLoginStats);
 
 module.exports = router;

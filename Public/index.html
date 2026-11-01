@@ -41,6 +41,7 @@
 
  
    <!-- ADMIN PANEL: sirf admin login par dikhta hai (Orders + tracking update, Customers) -->
+  <!-- ADMIN PANEL: sirf admin login par dikhta hai (Orders + tracking update, Customers) -->
     <section id="adminPanel" class="page-section" style="display:none;">
         <div class="adm-wrap">
 
@@ -78,6 +79,10 @@
                     <div><span>In Progress</span><b id="adminPendingOrders">0</b></div>
                 </div>
                 <div class="adm-stat">
+                    <div class="adm-stat-icon">🚫</div>
+                    <div><span>Cancelled</span><b id="adminCancelledOrders">0</b></div>
+                </div>
+                <div class="adm-stat">
                     <div class="adm-stat-icon">₹</div>
                     <div><span>Total Sales</span><b id="adminTotalSales">₹0</b></div>
                 </div>
@@ -110,6 +115,7 @@
                         <option value="dispatched">Dispatched</option>
                         <option value="out_for_delivery">Out for Delivery</option>
                         <option value="delivered">Delivered</option>
+                        <option value="cancelled">Cancelled</option>
                     </select>
                 </div>
 
@@ -156,6 +162,32 @@
             </div>
 
         </div>
+        <!-- ADMIN CANCEL POPUP: order cancel karne se pehle reason puchta hai -->
+        <div id="admCancelModal" class="adm-modal" style="display:none;">
+            <div class="adm-modal-box">
+                <button type="button" class="adm-modal-close" onclick="closeAdminCancel()" aria-label="Close">✖</button>
+
+                <h3 id="admCancelTitle">Cancel Order</h3>
+                <p class="adm-modal-sub">The customer will be notified by email. Choose why this order is being cancelled.</p>
+
+                <label class="adm-side-label" for="admCancelReason">Reason</label>
+                <select id="admCancelReason" class="adm-select adm-select-full" onchange="admCancelReasonChanged()"></select>
+
+                <label class="adm-side-label" for="admCancelDetails" style="margin-top:14px;">
+                    Details <span id="admCancelDetailsHint">(optional)</span>
+                </label>
+                <textarea id="admCancelDetails" class="adm-textarea" rows="3" maxlength="300"
+                          placeholder="Add a short note for the customer..."></textarea>
+
+                <p id="admCancelRefundNote" class="adm-modal-warn" style="display:none;"></p>
+
+                <div class="adm-modal-actions">
+                    <button type="button" class="adm-btn adm-btn-ghost" onclick="closeAdminCancel()">Keep Order</button>
+                    <button type="button" class="adm-danger" id="admCancelConfirm" onclick="submitAdminCancel()">Cancel Order</button>
+                </div>
+            </div>
+        </div>
+
     </section>
 
     <!-- 03. HOME PAGE WRAPPER: Hero + Featured + Products + Video + Why Us + Stats + Trust + Testimonials + CTA + Features -->

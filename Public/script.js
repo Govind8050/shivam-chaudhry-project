@@ -2929,3 +2929,360 @@ function orderTrackingFromStatus(status) {
         label: ADMIN_STATUS_LIST[index].label
     };
 }
+
+/* =====================================================
+   CUSTOMER: ORDER TRACKING (DB ke status se) + ORDER CANCEL
+   script.js ke bilkul END me paste karo.
+   Ye block script.js ke kisi function par depend nahi karta.
+   Neeche 3 jagah par isse use karna hai, wo ya to aap khud karo (3 line) ya script.js bhejo to main kar dunga:
+     1) Order detail me purana tracker hata kar:   ${orderTrackerHTML(order)}
+     2) Tracker ke neeche:                         ${orderCancelHTML(order)}
+     3) My Orders list me status badge ki jagah:   ${orderStatusBadgeHTML(order)}
+   ===================================================== */
+
+// Server ka address: customer ka order cancel (neeche /<id>/cancel jodta hai)
+const CX_API_ORDERS = "/api/auth/orders";
+
+// Tracking ke 4 steps (key wahi hai jo database me save hoti hai)
+const CX_STEPS = [
+    { key: "placed",           short: "Placed",     text: "Order Placed" },
+    { key: "dispatched",       short: "Dispatched", text: "Dispatched 🚚" },
+    { key: "out_for_delivery", short: "Out",        text: "Out for Delivery 🚴" },
+    { key: "delivered",        short: "Delivered",  text: "Delivered ✅" }
+];
+
+// Cancel ke reasons (code server par bhi wahi hain). "Other" me likhna zaroori hai
+const CX_CANCEL_REASONS = [
+    { code: "mistake",       label: "Ordered by mistake" },
+    { code: "wrong_address", label: "Wrong address or phone number entered" },
+    { code: "change_item",   label: "Want to change product or quantity" },
+    { code: "better_price",  label: "Found a better price elsewhere" },
+    { code: "too_slow",      label: "Delivery is taking too long" },
+    { code: "payment_issue", label: "Problem with payment" },
+    { code: "other",         label: "Other (please explain)" }
+];
+
+// Customer sirf order ke 24 ghante tak cancel kar sakta hai
+const CX_CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+
+/* ---------- chhote helpers ---------- */
+
+// Text ko HTML me safe banata hai
+function cxEsc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[ch]));
+}
+
+// Order ka status: 4 keys me se ek ya "cancelled". "Placed" (bada P) ya khaali ho to "placed"
+function cxStatus(order) {
+    const key = String(order && order.status || "placed").trim().toLowerCase();
+    if (key === "cancelled") return "cancelled";
+    return CX_STEPS.some(s => s.key === key) ? key : "placed";
+}
+
+// "5h 20m" jaisa bacha hua time
+function cxTimeLeft(ms) {
+    const minutes = Math.max(1, Math.ceil(ms / 60000));
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// Order ki date (createdAt) ko Date me badalta hai
+function cxOrderTime(order) {
+    const d = new Date(order && (order.createdAt || order.date));
+    return isNaN(d.getTime()) ? null : d;
+}
+
+// Chhota message screen ke neeche dikhata hai (hara = safal, laal = error)
+function cxToast(message, isError) {
+    const toast = document.createElement("div");
+    toast.className = "cx-toast" + (isError ? " error" : "");
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3600);
+}
+
+
+/* ---------- TRACKING ---------- */
+
+// My Orders list me status ka rangeen badge (Order Placed / Dispatched / ... / Cancelled)
+function orderStatusBadgeHTML(order) {
+
+    const status = cxStatus(order);
+    const label = status === "cancelled"
+        ? "Cancelled"
+        : CX_STEPS.find(s => s.key === status).text.replace(/\s*[^\w\s]+$/u, "");
+
+    return `<i class="acct-status cx-st-${status}">${label}</i>`;
+}
+
+// Order detail me tracking: 4 step ki line (jitna status utna green, delivered par poori green).
+// Cancelled order me tracking ki jagah laal "Order Cancelled" dabba dikhata hai
+function orderTrackerHTML(order) {
+
+    const status = cxStatus(order);
+
+    if (status === "cancelled") {
+
+        const paid = String(order.paymentStatus || "").toLowerCase();
+        const who = order.cancelledBy === "admin" ? "by our team" : "by you";
+        const when = order.cancelledAt ? new Date(order.cancelledAt).toLocaleString("en-IN", {
+            day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+        }) : "";
+
+        let refund = "";
+
+        if (order.paymentMethod === "online" && paid === "refunded") {
+            refund = '<p class="cx-refund ok">Your payment has been refunded. It can take 5-7 working days to show in your account.</p>';
+        } else if (order.paymentMethod === "online" && paid === "refund_pending") {
+            refund = '<p class="cx-refund warn">Your refund is being processed by our team.</p>';
+        }
+
+        return `
+        <div class="cx-cancelled">
+            <div class="cx-cancelled-title">❌ Order Cancelled</div>
+            <p><b>Reason:</b> ${cxEsc(order.cancelReason || "Not given")}</p>
+            <p class="cx-cancelled-meta">Cancelled ${who}${when ? " on " + cxEsc(when) : ""}</p>
+            ${refund}
+        </div>`;
+    }
+
+    const current = CX_STEPS.findIndex(s => s.key === status);
+
+    const steps = CX_STEPS.map((s, n) => `
+        <div class="cx-step ${n < current ? "done" : ""} ${n === current ? "current" : ""}">
+            <span class="cx-dot"></span>
+            <small>${s.short}</small>
+        </div>
+    `).join("");
+
+    return `
+        <div class="cx-track ${status === "delivered" ? "is-delivered" : ""}">${steps}</div>
+        <p class="cx-track-text">${CX_STEPS[current].text}</p>
+    `;
+}
+
+
+/* ---------- CANCEL ---------- */
+
+// Ye order abhi cancel ho sakta hai ya nahi, aur nahi to kyu (server bhi yahi rules dobara jaanchta hai)
+function orderCancelState(order) {
+
+    const status = cxStatus(order);
+
+    if (status === "cancelled" || status === "delivered") {
+        return { allowed: false, message: "" };
+    }
+
+    if (status !== "placed") {
+        return { allowed: false, message: "Cancellation is not available once the order is dispatched. Please contact support." };
+    }
+
+    const placedAt = cxOrderTime(order);
+    const left = placedAt ? CX_CANCEL_WINDOW_MS - (Date.now() - placedAt.getTime()) : 0;
+
+    if (left <= 0) {
+        return { allowed: false, message: "The 24-hour cancellation window for this order has ended." };
+    }
+
+    return { allowed: true, timeLeft: cxTimeLeft(left), message: "" };
+}
+
+// Order detail ke neeche "Cancel Order" button (ya nahi ho sakta to wajah)
+function orderCancelHTML(order) {
+
+    const info = orderCancelState(order);
+    const status = cxStatus(order);
+
+    if (status === "cancelled" || status === "delivered") return "";
+
+    if (!info.allowed) {
+        return `<div class="cx-cancel"><p class="cx-cancel-note muted">${cxEsc(info.message)}</p></div>`;
+    }
+
+    return `
+    <div class="cx-cancel">
+        <p class="cx-cancel-note">You can cancel this order for the next <b>${info.timeLeft}</b> (within 24 hours of ordering, before dispatch).</p>
+        <button type="button" class="cx-cancel-btn" onclick="openCancelOrder(${Number(order.id)})">Cancel Order</button>
+    </div>`;
+}
+
+// base64url JWT ke andar ka data padhta hai
+function cxDecodeJwt(token) {
+    try {
+        const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+        return JSON.parse(atob(part));
+    } catch (e) {
+        return null;
+    }
+}
+
+// Customer ka login token dhundhta hai (browser storage me kisi bhi naam se ho, bas customer ka valid token ho)
+function cxFindToken() {
+
+    for (const store of [localStorage, sessionStorage]) {
+        for (let i = 0; i < store.length; i++) {
+
+            const key = store.key(i);
+            if (key === "adminToken") continue;
+
+            let value = store.getItem(key);
+
+            try {
+                const parsed = JSON.parse(value);
+                if (parsed && typeof parsed === "object" && typeof parsed.token === "string") value = parsed.token;
+            } catch (e) { /* seedhi string hai */ }
+
+            if (typeof value !== "string" || !/^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(value)) continue;
+
+            const payload = cxDecodeJwt(value);
+
+            if (payload && payload.role === "customer" && (!payload.exp || payload.exp * 1000 > Date.now())) {
+                return value;
+            }
+        }
+    }
+
+    return null;
+}
+
+let cxCancelOrderId = null;
+let cxCancelDone = null;
+
+// "Cancel Order" button: reason puchne wala popup kholta hai.
+// onDone (optional) cancel hone ke baad chalta hai; na ho to page dobara load hota hai
+function openCancelOrder(orderId, onDone) {
+
+    closeCancelOrder();
+
+    cxCancelOrderId = Number(orderId);
+    cxCancelDone = typeof onDone === "function" ? onDone : null;
+
+    const options = CX_CANCEL_REASONS
+        .map(r => `<option value="${r.code}">${cxEsc(r.label)}</option>`).join("");
+
+    const modal = document.createElement("div");
+    modal.id = "cxCancelModal";
+    modal.className = "cx-modal";
+
+    modal.innerHTML = `
+        <div class="cx-modal-box">
+            <button type="button" class="cx-modal-close" onclick="closeCancelOrder()" aria-label="Close">✖</button>
+
+            <h3>Cancel Order #${cxCancelOrderId}</h3>
+            <p class="cx-modal-sub">Tell us why you want to cancel. Orders can be cancelled within 24 hours of ordering, before they are dispatched.</p>
+
+            <label for="cxCancelReason">Reason for cancellation</label>
+            <select id="cxCancelReason" onchange="cxReasonChanged()">
+                <option value="">Select a reason</option>
+                ${options}
+            </select>
+
+            <label for="cxCancelDetails">Details <span id="cxCancelHint">(optional)</span></label>
+            <textarea id="cxCancelDetails" rows="3" maxlength="300" placeholder="Add a few words if you like..."></textarea>
+
+            <p id="cxCancelError" class="cx-modal-error"></p>
+
+            <div class="cx-modal-actions">
+                <button type="button" class="cx-keep-btn" onclick="closeCancelOrder()">Keep Order</button>
+                <button type="button" class="cx-confirm-btn" id="cxCancelConfirm" onclick="submitCancelOrder()">Confirm Cancellation</button>
+            </div>
+        </div>`;
+
+    modal.addEventListener("click", e => { if (e.target === modal) closeCancelOrder(); });
+
+    document.body.appendChild(modal);
+}
+
+// "Other" chunne par details likhna zaroori dikhata hai
+function cxReasonChanged() {
+
+    const other = document.getElementById("cxCancelReason").value === "other";
+
+    document.getElementById("cxCancelHint").textContent = other ? "(required, explain in a few words)" : "(optional)";
+    document.getElementById("cxCancelError").textContent = "";
+}
+
+// Cancel popup band karta hai
+function closeCancelOrder() {
+
+    const modal = document.getElementById("cxCancelModal");
+    if (modal) modal.remove();
+
+    cxCancelOrderId = null;
+}
+
+// "Confirm Cancellation": reason sahi ho tabhi server ko bhejta hai. Server 24 ghante, status aur reason dobara jaanchta hai
+async function submitCancelOrder() {
+
+    const id = cxCancelOrderId;
+    if (!id) return;
+
+    const reason = document.getElementById("cxCancelReason").value;
+    const details = document.getElementById("cxCancelDetails").value.trim();
+    const error = document.getElementById("cxCancelError");
+    const button = document.getElementById("cxCancelConfirm");
+
+    if (!reason) {
+        error.textContent = "Please select a reason for cancellation.";
+        return;
+    }
+
+    if (reason === "other") {
+        const words = details.split(/\s+/).filter(w => w.length >= 2);
+
+        if (details.length < 15 || words.length < 3) {
+            error.textContent = "Please explain your reason clearly (at least 15 characters and a few words).";
+            return;
+        }
+    }
+
+    const token = cxFindToken();
+
+    if (!token) {
+        error.textContent = "Your session has expired. Please login again.";
+        return;
+    }
+
+    error.textContent = "";
+    button.disabled = true;
+    button.textContent = "Cancelling...";
+
+    try {
+
+        const res = await fetch(`${CX_API_ORDERS}/${id}/cancel`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ reason, details })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            error.textContent = data.message || "Could not cancel the order.";
+            button.disabled = false;
+            button.textContent = "Confirm Cancellation";
+            return;
+        }
+
+        closeCancelOrder();
+        cxToast(data.message || "Order cancelled");
+
+        if (cxCancelDone) {
+            cxCancelDone(data.order);
+        } else {
+            setTimeout(() => location.reload(), 1400);
+        }
+
+    } catch (err) {
+        console.log("Cancel order error:", err);
+        error.textContent = "Server error. Please try again.";
+        button.disabled = false;
+        button.textContent = "Confirm Cancellation";
+    }
+}
+
+

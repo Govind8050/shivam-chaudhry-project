@@ -12,10 +12,20 @@ const Order = sequelize.define(
     items: { type: DataTypes.JSON, allowNull: false },
     totalAmount: { type: DataTypes.INTEGER, allowNull: false },
     paymentMethod: { type: DataTypes.STRING, defaultValue: "cod" },
+
+    // pending / paid / refunded / refund_pending
     paymentStatus: { type: DataTypes.STRING, defaultValue: "pending" },
     razorpayOrderId: { type: DataTypes.STRING },
     razorpayPaymentId: { type: DataTypes.STRING },
-    status: { type: DataTypes.STRING, defaultValue: "Placed" }
+
+    // Delivery tracking: placed -> dispatched -> out_for_delivery -> delivered
+    // ya cancelled (admin panel se badalta hai, customer ke My Orders me yahi dikhta hai)
+    status: { type: DataTypes.STRING(30), allowNull: false, defaultValue: "placed" },
+
+    // Cancel hone par: kyu, kisne (customer / admin) aur kab
+    cancelReason: { type: DataTypes.STRING(500) },
+    cancelledBy: { type: DataTypes.STRING(20) },
+    cancelledAt: { type: DataTypes.DATE }
   },
   { tableName: "orders", timestamps: true }
 );

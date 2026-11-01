@@ -7,7 +7,8 @@ const Admin = require("../models/Admin");
 const Order = require("../models/Order");
 const Address = require("../models/Address");
 const User = require("../models/User");
-const { sendOrderEmails } = require("../utils/Mailer");
+const rzp = require("../razorpay");
+const { sendOrderEmails, sendCancelEmails } = require("../utils/Mailer");
 
 /* ================= HELPERS ================= */
 
@@ -48,6 +49,96 @@ function cleanAddress(a) {
 
 // Delivery tracking ke 4 allowed status (inhi se customer ke site par tracking dikhta hai)
 const ORDER_STATUSES = ["placed", "dispatched", "out_for_delivery", "delivered"];
+
+/* ================= CANCELLATION RULES ================= */
+
+// Customer sirf order ke 24 ghante tak cancel kar sakta hai
+const CANCEL_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+// Customer sirf tab cancel kar sakta hai jab order abhi dispatch na hua ho
+const CUSTOMER_CANCELLABLE = ["placed"];
+
+// Customer ke cancel karne ke reasons (code -> text). Dropdown me yahi dikhte hain
+const CUSTOMER_CANCEL_REASONS = {
+  mistake: "Ordered by mistake",
+  wrong_address: "Wrong address or phone number entered",
+  change_item: "Want to change product or quantity",
+  better_price: "Found a better price elsewhere",
+  too_slow: "Delivery is taking too long",
+  payment_issue: "Problem with payment",
+  other: "Other"
+};
+
+// Admin ke cancel karne ke reasons
+const ADMIN_CANCEL_REASONS = {
+  out_of_stock: "Product out of stock",
+  cannot_deliver: "Cannot deliver to this address",
+  customer_request: "Cancelled on customer's request",
+  payment_issue: "Payment problem",
+  other: "Other"
+};
+
+// Order ka status (khaali ya "Placed" jaisa purana ho to bhi sahi key deta hai)
+function normalizeStatus(status) {
+  return String(status || "placed").trim().toLowerCase();
+}
+
+// "Other" reason me customer ne sach me kuch samajhne layak likha hai ya nahi.
+// (kam se kam 15 akshar, 3 shabd, alag-alag akshar; "aaaaaaa" ya "asdf asdf" jaisa nahi chalega)
+function looksLikeRealText(text) {
+  const t = String(text || "").trim();
+  const letters = (t.match(/[A-Za-z\u0900-\u097F]/g) || []).length;
+  const words = t.split(/\s+/).filter(w => w.length >= 2);
+  const distinct = new Set(t.toLowerCase().replace(/\s/g, "")).size;
+
+  return t.length >= 15 && letters >= 10 && words.length >= 3 && distinct >= 6;
+}
+
+// Cancel ka reason jaanchta hai aur database me rakhne wala text banata hai.
+// Reason list me se hona chahiye. "Other" ho to usse jyada detail chahiye
+function buildCancelReason(list, code, details, otherIsValid) {
+  const key = String(code || "").trim();
+
+  if (!list[key]) {
+    return { ok: false, message: "Please select a reason for cancellation" };
+  }
+
+  const extra = String(details || "").trim().slice(0, 300);
+
+  if (key === "other") {
+    if (!otherIsValid(extra)) {
+      return { ok: false, message: "Please explain your reason clearly (at least 15 characters and a few words)" };
+    }
+    return { ok: true, text: "Other: " + extra };
+  }
+
+  return { ok: true, text: extra ? list[key] + " - " + extra : list[key] };
+}
+
+// Cancel hone par online paid order ka paisa Razorpay se wapas karta hai.
+// Refund fail ho jaye to order phir bhi cancel hota hai, bas "refund_pending" likh deta hai (admin haath se refund kare)
+async function refundIfPaid(order) {
+
+  if (order.paymentMethod !== "online" || order.paymentStatus !== "paid" || !order.razorpayPaymentId) {
+    return "none";
+  }
+
+  try {
+    await rzp.payments.refund(order.razorpayPaymentId, {
+      amount: Math.round(Number(order.totalAmount) * 100),
+      speed: "normal",
+      notes: { orderId: String(order.id), reason: "Order cancelled" }
+    });
+
+    order.paymentStatus = "refunded";
+    return "refunded";
+
+  } catch (err) {
+    console.log("❌ Refund error (order " + order.id + "):", err && err.error ? err.error : err);
+    order.paymentStatus = "refund_pending";
+    return "pending";
+  }
+}
 
 /* ================= REGISTER (customers table) ================= */
 
@@ -531,6 +622,10 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Order not found" });
     }
 
+    if (normalizeStatus(order.status) === "cancelled") {
+      return res.status(400).json({ success: false, message: "A cancelled order cannot be updated" });
+    }
+
     order.status = status;
     await order.save();
 
@@ -538,6 +633,122 @@ exports.updateOrderStatus = async (req, res) => {
 
   } catch (err) {
     console.log("Update order status error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Customer apna order cancel karta hai: sirf 24 ghante ke andar, dispatch se pehle, aur sahi reason ke saath
+exports.cancelMyOrder = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order || order.customerEmail !== req.user.email) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const status = normalizeStatus(order.status);
+
+    if (status === "cancelled") {
+      return res.status(400).json({ success: false, message: "This order is already cancelled" });
+    }
+
+    if (status === "delivered") {
+      return res.status(400).json({ success: false, message: "A delivered order cannot be cancelled" });
+    }
+
+    if (!CUSTOMER_CANCELLABLE.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "This order is already dispatched, so it cannot be cancelled online. Please contact support."
+      });
+    }
+
+    if (Date.now() - new Date(order.createdAt).getTime() > CANCEL_WINDOW_MS) {
+      return res.status(400).json({
+        success: false,
+        message: "Orders can be cancelled only within 24 hours of placing them."
+      });
+    }
+
+    const reason = buildCancelReason(CUSTOMER_CANCEL_REASONS, req.body.reason, req.body.details, looksLikeRealText);
+
+    if (!reason.ok) {
+      return res.status(400).json({ success: false, message: reason.message });
+    }
+
+    const refund = await refundIfPaid(order);
+
+    order.status = "cancelled";
+    order.cancelReason = reason.text;
+    order.cancelledBy = "customer";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    if (typeof sendCancelEmails === "function") {
+      sendCancelEmails(order.toJSON(), "customer")
+        .catch(err => console.log("❌ Cancel email error:", err && err.message ? err.message : err));
+    }
+
+    const message =
+      refund === "refunded" ? "Order cancelled. Your payment will be refunded to the original payment method in 5-7 working days."
+      : refund === "pending" ? "Order cancelled. Our team will process your refund shortly."
+      : "Order cancelled successfully.";
+
+    res.json({ success: true, message, refund, order: order.toJSON() });
+
+  } catch (err) {
+    console.log("Cancel order error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Admin kisi bhi order ko cancel kar sakta hai (jaise product available na ho), delivery se pehle kabhi bhi
+exports.adminCancelOrder = async (req, res) => {
+  try {
+    const order = await Order.findByPk(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    const status = normalizeStatus(order.status);
+
+    if (status === "cancelled") {
+      return res.status(400).json({ success: false, message: "This order is already cancelled" });
+    }
+
+    if (status === "delivered") {
+      return res.status(400).json({ success: false, message: "A delivered order cannot be cancelled" });
+    }
+
+    const reason = buildCancelReason(
+      ADMIN_CANCEL_REASONS,
+      req.body.reason,
+      req.body.details,
+      text => String(text || "").trim().length >= 5
+    );
+
+    if (!reason.ok) {
+      return res.status(400).json({ success: false, message: reason.message });
+    }
+
+    const refund = await refundIfPaid(order);
+
+    order.status = "cancelled";
+    order.cancelReason = reason.text;
+    order.cancelledBy = "admin";
+    order.cancelledAt = new Date();
+    await order.save();
+
+    if (typeof sendCancelEmails === "function") {
+      sendCancelEmails(order.toJSON(), "admin")
+        .catch(err => console.log("❌ Cancel email error:", err && err.message ? err.message : err));
+    }
+
+    res.json({ success: true, message: "Order cancelled", refund, order: order.toJSON() });
+
+  } catch (err) {
+    console.log("Admin cancel order error:", err);
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
